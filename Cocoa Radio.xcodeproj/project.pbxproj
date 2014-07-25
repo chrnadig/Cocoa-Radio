@@ -45,6 +45,7 @@
 		3CE31D6D15F013DC00F0123B /* CSDRAudioDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CE31D6C15F013DB00F0123B /* CSDRAudioDevice.m */; };
 		3CE31DB315F12E3800F0123B /* CSDRRingBuffer.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CE31DB215F12E3800F0123B /* CSDRRingBuffer.m */; };
 		3CE31DB515F130E500F0123B /* audioprobes.d in Sources */ = {isa = PBXBuildFile; fileRef = 3CE31DB415F130E500F0123B /* audioprobes.d */; };
+		65CE669919825466002C05D4 /* rtl-sdr.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65CE669819825466002C05D4 /* rtl-sdr.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -145,6 +146,7 @@
 		3CE31DB115F12E3800F0123B /* CSDRRingBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CSDRRingBuffer.h; sourceTree = "<group>"; };
 		3CE31DB215F12E3800F0123B /* CSDRRingBuffer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CSDRRingBuffer.m; sourceTree = "<group>"; };
 		3CE31DB415F130E500F0123B /* audioprobes.d */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.dtrace; path = audioprobes.d; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.c; };
+		65CE669819825466002C05D4 /* rtl-sdr.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = "rtl-sdr.framework"; path = "../Softshell/rtl-sdr/build/Debug/rtl-sdr.framework"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -159,6 +161,7 @@
 				3C44EA9B16062F3300CF8BFC /* rtl-sdr.framework in Frameworks */,
 				3C2E3DCF1582C4C3003BB124 /* Accelerate.framework in Frameworks */,
 				3C27C52215817A16001FD108 /* OpenGL.framework in Frameworks */,
+				65CE669919825466002C05D4 /* rtl-sdr.framework in Frameworks */,
 				3C27C4E915813348001FD108 /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -202,6 +205,10 @@
 		3C27C4E715813348001FD108 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				65CE669819825466002C05D4 /* rtl-sdr.framework */,
+				3C27C4EB15813348001FD108 /* AppKit.framework */,
+				3C27C4EC15813348001FD108 /* CoreData.framework */,
+				3C27C4ED15813348001FD108 /* Foundation.framework */,
 				3C7CAB1815BDC53600E78D83 /* AudioUnit.framework */,
 				3C7CAB1915BDC53600E78D83 /* CoreAudioKit.framework */,
 				3C7CAB1515BDC51900E78D83 /* CoreAudio.framework */,
@@ -209,19 +216,8 @@
 				3C2E3DCE1582C4C3003BB124 /* Accelerate.framework */,
 				3C27C52115817A16001FD108 /* OpenGL.framework */,
 				3C27C4E815813348001FD108 /* Cocoa.framework */,
-				3C27C4EA15813348001FD108 /* Other Frameworks */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		3C27C4EA15813348001FD108 /* Other Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				3C27C4EB15813348001FD108 /* AppKit.framework */,
-				3C27C4EC15813348001FD108 /* CoreData.framework */,
-				3C27C4ED15813348001FD108 /* Foundation.framework */,
-			);
-			name = "Other Frameworks";
 			sourceTree = "<group>";
 		};
 		3C27C4EE15813348001FD108 /* Cocoa Radio */ = {
@@ -490,9 +486,9 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx10.7;
+				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
@@ -511,8 +507,8 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.6;
-				SDKROOT = macosx10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				SDKROOT = macosx;
 			};
 			name = Release;
 		};
@@ -523,12 +519,15 @@
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_ENTITLEMENTS = "Cocoa Radio/Cocoa Radio.entitlements";
 				CODE_SIGN_IDENTITY = "";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Users/nadig/src/Softshell/rtl-sdr/build/Debug",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Cocoa Radio/Cocoa Radio-Prefix.pch";
 				INFOPLIST_FILE = "Cocoa Radio/Cocoa Radio-Info.plist";
-				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = CocoaRadio;
-				SDKROOT = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -540,12 +539,15 @@
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_ENTITLEMENTS = "Cocoa Radio/Cocoa Radio.entitlements";
 				CODE_SIGN_IDENTITY = "";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Users/nadig/src/Softshell/rtl-sdr/build/Debug",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Cocoa Radio/Cocoa Radio-Prefix.pch";
 				INFOPLIST_FILE = "Cocoa Radio/Cocoa Radio-Info.plist";
-				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = CocoaRadio;
-				SDKROOT = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;

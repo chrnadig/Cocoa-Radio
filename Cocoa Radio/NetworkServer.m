@@ -155,7 +155,7 @@
         
         // Catch errors and interruptions
         if (fileDescriptor == -1) {
-            if (error == EINTR) {
+            if (errno == EINTR) {
                 NSLog(@"Interrupted, resuming wait.");              
             } else {
                 NSLog(@"Connection attempt failed.");

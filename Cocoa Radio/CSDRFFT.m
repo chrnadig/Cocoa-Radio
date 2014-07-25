@@ -8,11 +8,8 @@
 
 #import "CSDRFFT.h"
 #import "CSDRRingBuffer.h"
-
-#import "dspprobes.h"
-
 #import <Accelerate/Accelerate.h>
-#import <vecLib/vForce.h>
+#import "dspprobes.h"
 
 @implementation CSDRFFT
 
