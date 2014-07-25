@@ -1,0 +1,4 @@
+
+CSDRRingBuffer:
+- replace NSMutableData with float *malloc()
+- maybe simpler implementation?
