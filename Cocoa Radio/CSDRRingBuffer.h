@@ -12,15 +12,13 @@
 #import <AudioUnit/AudioUnit.h>
 
 @interface CSDRRingBuffer : NSObject
-{
-    NSCondition *lock;
-    
-    NSMutableData *data;
-    int tail, head;
-}
 
-@property (readonly) int fillLevel;
-@property (readonly) int capacity;
+@property (strong) NSCondition *lock;
+@property (strong) NSMutableData *data;
+@property (assign) NSInteger head;
+@property (assign) NSInteger tail;
+@property (readonly) NSInteger fillLevel;
+@property (readonly) NSInteger capacity;
 
 - (id)initWithCapacity:(NSInteger)cap;
 
@@ -30,4 +28,5 @@
 
 // Discard the contents
 - (void)clear;
+
 @end

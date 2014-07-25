@@ -18,129 +18,105 @@
 
 - (id)initWithCapacity:(NSInteger)cap
 {
-    self = [super init];
-    if (self != nil) {
-        lock = [[NSCondition alloc] init];
-        
-        data = [[NSMutableData alloc] initWithLength:cap * sizeof(float)];
-        tail = head = 0;
-        
-//        NSLog(@"Created a ring buffer with %ld elements.", cap);
+    if (self = [super init]) {
+        _lock = [[NSCondition alloc] init];
+        _data = [[NSMutableData alloc] initWithLength:cap * sizeof(float)];
+        _tail = _head = 0;
     }
-    
     return self;
 }
 
-- (int)fillLevel
+- (NSInteger)fillLevel
 {
-    int capacityFrames = (int)[data length] / sizeof(float);
-    return (head - tail + capacityFrames) % capacityFrames;
+    NSInteger capacityFrames = [self.data length] / sizeof(float);
+    return (self.head - self.tail + capacityFrames) % capacityFrames;
 }
 
-- (int)capacity
+- (NSInteger)capacity
 {
-    return (int)[data length] / sizeof(float);
+    return [self.data length] / sizeof(float);
 }
 
 - (void)clear
 {
-    head = tail = 0;
+    self.head = self.tail = 0;
 }
 
 - (void)storeData:(NSData *)newData
 {
-    [lock lock];
+    NSInteger overflowAmount;
+    NSInteger capacityFrames;
+    NSInteger newDataFrames;
+    NSInteger usedBuffer;
+    const float *inFloats;
+    float *outFloats;
 
+    [self.lock lock];
     // Determine whether we'll overflow the buffer.
-    int capacityFrames = (int)[data length] / sizeof(float);
-    int newDataFrames  = (int)[newData length] / sizeof(float);
-
-    int usedBuffer = head - tail;
-    if (usedBuffer < 0) usedBuffer += capacityFrames;
+    capacityFrames = [self.data length] / sizeof(float);
+    newDataFrames  = [newData length] / sizeof(float);
+    usedBuffer = self.head - self.tail;
+    if (usedBuffer < 0) {
+        usedBuffer += capacityFrames;
+    }
 
     // DTrace it
     if (COCOARADIOAUDIO_RINGBUFFERFILL_ENABLED()) {
-        COCOARADIOAUDIO_RINGBUFFERFILL(newDataFrames, head, tail);
+        COCOARADIOAUDIO_RINGBUFFERFILL((int)newDataFrames, (int)self.head, (int)self.tail);
     }
 
-    int overflowAmount = newDataFrames - (capacityFrames - usedBuffer);
+    overflowAmount = newDataFrames - (capacityFrames - usedBuffer);
     if (overflowAmount > 0) {
         NSLog(@"Ring buffer overflow");
     }
     
     // Do it the easy way
-    float *outFloats = [data mutableBytes];
-    const float *inFloats = [newData bytes];
-    for (int i = 0; i < newDataFrames; i++) {
-        outFloats[head] = inFloats[i];
-        head = (head + 1) % capacityFrames;
+    outFloats = [self.data mutableBytes];
+    inFloats = [newData bytes];
+    for (NSInteger i = 0; i < newDataFrames; i++) {
+        outFloats[self.head] = inFloats[i];
+        self.head = (self.head + 1) % capacityFrames;
         // Detect overflow
-        if (head == tail) {
-            tail = (head + 1) % capacityFrames;
+        if (self.head == self.tail) {
+            self.tail = (self.head + 1) % capacityFrames;
         }
     }
     
-    [lock unlock];
+    [self.lock unlock];
     return;
-    
-//    int overflowAmount = newDataFrames - (capacityFrames - usedBuffer);
-//    if (overflowAmount > 0) {
-//        NSLog(@"Audio ring buffer overflow");
-//        // Adjust the head index
-//        tail = (tail + overflowAmount) % capacityFrames;
-//    }
-
-    // Copy as much as possible from the tail to the buffer end
-    int framesToEndOfBuffer = (capacityFrames - head);
-
-    
-// Do the write anyway
-    memcpy(&outFloats[head], inFloats,
-           framesToEndOfBuffer * sizeof(float));
-    
-    // Copy the remainder to the beginning of the buffer
-    int remainder = newDataFrames - framesToEndOfBuffer;
-    if (remainder > 0) {
-        NSLog(@"write wrap");
-        memcpy(outFloats, &inFloats[newDataFrames - remainder],
-               remainder * sizeof(float));
-    }
-    
-    // Adjust the head index
-    head = (head + newDataFrames) % capacityFrames;
-    
-    // Make sure head != tail (that's the empty condition)
-    if (tail == head) {
-        tail = (tail + 1) % capacityFrames;
-        NSLog(@"Audio ring buffer overflow (one byte)");
-    }
-        
-    [lock unlock];
 }
 
 - (void)fetchFrames:(int)nFrames into:(AudioBufferList *)ioData
 {
+    NSInteger capacityFrames;
+    NSInteger filledFrames;
+    NSInteger underrunFrames;
+    NSInteger framesToEndOfBuffer;
+    NSInteger toRead;
+    NSInteger remainder;
+    float *outFloats;
+    float *bufferFloats;
+    
     // Basic sanity checking
     if (ioData->mBuffers[0].mDataByteSize < nFrames * sizeof(float)) {
         NSLog(@"Not enough memory provided for requested frames.");
         return;
     }
     
-    [lock lock];
+    [self.lock lock];
 
-    // If we're dealing with a buffer underrun zero-out all the missing
-    // data and make it fit within the buffer.
-    int capacityFrames = (int)[data length] / sizeof(float);
-    int filledFrames = (head - tail + capacityFrames) % capacityFrames;
-    float *outFloats = ioData->mBuffers[0].mData;
-    float *bufferFloats = [data mutableBytes];
+    // If we're dealing with a buffer underrun zero-out all the missing data and make it fit within the buffer.
+    capacityFrames = [self.data length] / sizeof(float);
+    filledFrames = (self.head - self.tail + capacityFrames) % capacityFrames;
+    outFloats = ioData->mBuffers[0].mData;
+    bufferFloats = [self.data mutableBytes];
 
     // DTrace it
     if (COCOARADIOAUDIO_RINGBUFFEREMPTY_ENABLED()) {
-        COCOARADIOAUDIO_RINGBUFFEREMPTY(nFrames, head, tail);
+        COCOARADIOAUDIO_RINGBUFFEREMPTY(nFrames, (int)self.head, (int)self.tail);
     }
     
-    int underrunFrames = nFrames - filledFrames;
+    underrunFrames = nFrames - filledFrames;
     if (underrunFrames > 0) {
         NSLog(@"Buffer underrun!");
         nFrames -= underrunFrames;
@@ -148,68 +124,75 @@
     
     // Was this a 0-byte read or a complete underrun?
     if (nFrames == 0) {
-        [lock unlock];
+        [self.lock unlock];
         return;
     }
         
     // Now, we know that nFrames worth of data can be provided.
-
     // If the head has a greater index than the tail then the whole
     // buffer is linear in memory.  Therefore, the frames to the end
     // are simply head minus tail.
-    int framesToEndOfBuffer = head - tail;
+    framesToEndOfBuffer = self.head - self.tail;
 
     // If the tail is greater, then it wraps around in memory.  We
     // can only read until the end of the ring buffer, then start
     // again at the beginning
     if (framesToEndOfBuffer < 0) {
-        framesToEndOfBuffer = capacityFrames - tail;
+        framesToEndOfBuffer = capacityFrames - self.tail;
     }
 
     // Even if there's lots of data to the end of the buffer, we only
     // want to read the number of requested frames (in indicies)
-    int toRead = MIN(framesToEndOfBuffer, nFrames);
+    toRead = MIN(framesToEndOfBuffer, nFrames);
 
     // Perform the read
     // this is to sanitize the buffer in case of underrun
     bzero(outFloats, nFrames * sizeof(float));
-    memcpy(outFloats, &bufferFloats[tail], toRead * sizeof(float));
+    memcpy(outFloats, &bufferFloats[self.tail], toRead * sizeof(float));
     
     // If we didn't complete the read because we wrapped around,
     // continue at the beginning
-    int remainder = nFrames - toRead;
-
+    remainder = nFrames - toRead;
     if (remainder > 0) {
         memcpy(&outFloats[toRead], bufferFloats, remainder * sizeof(float));
     }
     
     // Update the tail index
-    tail = (tail + nFrames) % capacityFrames;
+    self.tail = (self.tail + nFrames) % capacityFrames;
     
-    [lock unlock];
+    [self.lock unlock];
 }
 
 // For now, a dumb copy.  Should call another function in the future
 - (void)fillData:(NSMutableData *)inputData
 {
+    NSInteger capacityFrames;
+    NSInteger filledFrames;
+    NSInteger underrunFrames;
+    NSInteger framesToEndOfBuffer;
+    NSInteger toRead;
+    NSInteger remainder;
+    float *outFloats;
+    float *bufferFloats;
+    
     // Basic sanity checking
     int nFrames = (int)[inputData length] / sizeof(float);
     
-    [lock lock];
+    [self.lock lock];
     
     // If we're dealing with a buffer underrun zero-out all the missing
     // data and make it fit within the buffer.
-    int capacityFrames = (int)[data length] / sizeof(float);
-    int filledFrames = (head - tail + capacityFrames) % capacityFrames;
-    float *outFloats = [inputData mutableBytes];
-    float *bufferFloats = [data mutableBytes];
+    capacityFrames = [self.data length] / sizeof(float);
+    filledFrames = (self.head - self.tail + capacityFrames) % capacityFrames;
+    outFloats = [inputData mutableBytes];
+    bufferFloats = [self.data mutableBytes];
     
     // DTrace it
     if (COCOARADIOAUDIO_RINGBUFFEREMPTY_ENABLED()) {
-        COCOARADIOAUDIO_RINGBUFFEREMPTY(nFrames, head, tail);
+        COCOARADIOAUDIO_RINGBUFFEREMPTY(nFrames, (int)self.head, (int)self.tail);
     }
     
-    int underrunFrames = nFrames - filledFrames;
+    underrunFrames = nFrames - filledFrames;
     if (underrunFrames > 0) {
         NSLog(@"Buffer underrun!");
         nFrames -= underrunFrames;
@@ -217,45 +200,43 @@
     
     // Was this a 0-byte read or a complete underrun?
     if (nFrames == 0) {
-        [lock unlock];
+        [self.lock unlock];
         return;
     }
     
     // Now, we know that nFrames worth of data can be provided.
-    
     // If the head has a greater index than the tail then the whole
     // buffer is linear in memory.  Therefore, the frames to the end
     // are simply head minus tail.
-    int framesToEndOfBuffer = head - tail;
+    framesToEndOfBuffer = self.head - self.tail;
     
     // If the tail is greater, then it wraps around in memory.  We
     // can only read until the end of the ring buffer, then start
     // again at the beginning
     if (framesToEndOfBuffer < 0) {
-        framesToEndOfBuffer = capacityFrames - tail;
+        framesToEndOfBuffer = capacityFrames - self.tail;
     }
     
     // Even if there's lots of data to the end of the buffer, we only
     // want to read the number of requested frames (in indicies)
-    int toRead = MIN(framesToEndOfBuffer, nFrames);
+    toRead = MIN(framesToEndOfBuffer, nFrames);
     
     // Perform the read
     // this is to sanitize the buffer in case of underrun
     bzero(outFloats, nFrames * sizeof(float));
-    memcpy(outFloats, &bufferFloats[tail], toRead * sizeof(float));
+    memcpy(outFloats, &bufferFloats[self.tail], toRead * sizeof(float));
     
     // If we didn't complete the read because we wrapped around,
     // continue at the beginning
-    int remainder = nFrames - toRead;
-    
+    remainder = nFrames - toRead;
     if (remainder > 0) {
         memcpy(&outFloats[toRead], bufferFloats, remainder * sizeof(float));
     }
     
     // Update the tail index
-    tail = (tail + nFrames) % capacityFrames;
+    self.tail = (self.tail + nFrames) % capacityFrames;
     
-    [lock unlock];
+    [self.lock unlock];
 
 }
 
