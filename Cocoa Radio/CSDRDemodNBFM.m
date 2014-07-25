@@ -12,23 +12,17 @@
 
 @implementation CSDRDemodNBFM
 
-- (id)initWithRFRate:(float)rfRate
-              AFRate:(float)afRate
+- (id)initWithRFRate:(float)rfRate AFRate:(float)afRate
 {
-    self = [super initWithRFRate:rfRate AFRate:afRate];
-    if (self != nil) {
-        self.ifBandwidth  = 11500;
-        self.ifSkirtWidth =  5000;
-        IFFilter.gain = 5.;
-        
-        AFFilter.bandwidth  = 18000;
-        AFFilter.skirtWidth =  5000;
-        
-        demodGain = 1.;
-        
-        average = NAN;        
+    if (self = [super initWithRFRate:rfRate AFRate:afRate]) {
+        self.ifBandwidth  = 11500.0;
+        self.ifSkirtWidth =  5000.0;
+        self.ifFilter.gain = 5.0;
+        self.afFilter.bandwidth  = 18000.0;
+        self.afFilter.skirtWidth =  5000.0;
+        self.dmGain = 1.0;
+        _average = NAN;
     }
-    
     return self;
 }
 
@@ -41,8 +35,8 @@
 {
     // Make sure that the temporary arrays are big enough
     int samples = (int)[complexInput[@"real"] length] / sizeof(float);
-    if ([radioPower length] < (samples * sizeof(float))) {
-        [radioPower setLength:samples * sizeof(float)];
+    if ([self.radioPower length] < (samples * sizeof(float))) {
+        [self.radioPower setLength:samples * sizeof(float)];
     }
     
     // Down convert
@@ -51,27 +45,27 @@
     
     // Low-pass filter
     NSDictionary *filtered;
-    filtered = [IFFilter filterDict:baseBand];
+    filtered = [self.ifFilter filterDict:baseBand];
     
     // Get an array of signal power levels for squelch
-    getPower(filtered, radioPower, powerContext, .0001);
+    getPower(filtered, self.radioPower, powerContext, .0001);
     
     // Quadrature demodulation
-    float dGain = demodGain + (self.rfSampleRate / (2 * M_PI * IFFilter.bandwidth));
+    float dGain = self.dmGain + self.rfSampleRate / (2 * M_PI * self.ifFilter.bandwidth);
     NSMutableData *demodulated;
     demodulated = (NSMutableData *)quadratureDemod(filtered, dGain, 0.);
     
     // Remove any residual DC in the signal
-    removeDC(demodulated, &average, .003);
+    removeDC(demodulated, &_average, .003);
     
     // Audio Frequency filter
     NSMutableData *audioFiltered;
-    audioFiltered = (NSMutableData *)[AFFilter filterData:demodulated];
+    audioFiltered = (NSMutableData *)[self.afFilter filterData:demodulated];
     
     // Iterate through the audio and mute sections that are too low
     // for now, just use a manual squelch threshold
     
-    const float *powerSamples = [radioPower bytes];
+    const float *powerSamples = [self.radioPower bytes];
     float *audioSamples = [audioFiltered mutableBytes];
     double newAverage = 0;
 
@@ -83,30 +77,29 @@
         float audioSample = audioSamples[i];
         audioSamples[i] = (mute)? 0. : audioSample;
     }
-    
-    // Copy average power into the rfPower variable
-    COCOARADIO_DEMODAVERAGE((int)(rfPower * 1000));
-    rfPower = newAverage * 10;
-    
-//    float duration = [complexInput[@"real"] length] / self.rfSampleRate;
-//    return [[NSMutableData alloc] initWithLength:(self.afSampleRate * duration)];
+
+    // Copy average power into the rfPower property
+    COCOARADIO_DEMODAVERAGE((int)(self.rfPower * 1000));
+    self.rfPower = newAverage * 10.0;
     
     // Rational resampling
-    NSData *audio;
-    audio = [AFResampler resample:audioFiltered];
-    
-    return audio;
+    return [self.afResampler resample:audioFiltered];
 }
 
-// Override the defaults as appropriate for NBFM (picks up after WBFM)
-- (float)ifMaxBandwidth
-{
-    return  50000;
-}
-
+// accessors for read-only properties
 - (float)ifMinBandwidth
 {
-    return   5000;
+    return 5000.0;
+}
+
+- (float)ifMaxBandwidth
+{
+    return 50000.0;
+}
+
+- (float)afMaxBandwidth
+{
+    return 18000.0;
 }
 
 @end

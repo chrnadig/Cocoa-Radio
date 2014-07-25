@@ -10,4 +10,6 @@
 
 @interface CSDRDemodAM : CSDRDemod
 
+@property (assign) double average;
+
 @end

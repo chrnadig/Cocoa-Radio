@@ -18,3 +18,9 @@ CSDRFFT:
 CSDRfilter:
 - Rename (uppercase F)
 - Split into multiple files (there are subclasses defined and implemented in same files)
+
+CSDRlowPassFloat:
+- rename to CSDRLowPassReal (capital L and Real instead of float)
+
+CSDRlowPassComplex:
+- rename to CSDRLowPassComplex (capital L)

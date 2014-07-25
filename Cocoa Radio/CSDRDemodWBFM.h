@@ -9,5 +9,8 @@
 #import "CSDRDemod.h"
 
 @interface CSDRDemodWBFM : CSDRDemod
+
+@property (assign) double average;
+
 @end
 

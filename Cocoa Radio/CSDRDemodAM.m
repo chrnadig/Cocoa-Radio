@@ -12,25 +12,16 @@
 
 @implementation CSDRDemodAM
 
-- (id)initWithRFRate:(float)rfRate
-              AFRate:(float)afRate
+- (id)initWithRFRate:(float)rfRate AFRate:(float)afRate
 {
-    self = [super initWithRFRate:rfRate AFRate:afRate];
-    if (self != nil) {
-        IFFilter.bandwidth  = 90000;
-        IFFilter.skirtWidth = 20000;
-        IFFilter.gain = 1.;
-        
-        // Stereo WBFM Radio has a pilot tone at 19KHz.  It's better to
-        // filter this signal out.  Therefore, we'll set the maximum af
-        // frequency to 18 KHz + a 1KHz skirt width.
-        AFFilter.bandwidth  = 18000;
-        AFFilter.skirtWidth = 10000;
-        AFFilter.gain = .5;
-        
-        average = NAN;
-        
-        radioPower = [[NSMutableData alloc] init];
+    if (self = [super initWithRFRate:rfRate AFRate:afRate]) {
+        self.ifFilter.bandwidth  = 90000.0;
+        self.ifFilter.skirtWidth = 20000.0;
+        self.ifFilter.gain = 1.0;
+        self.afFilter.bandwidth  = 9000.0;
+        self.afFilter.skirtWidth = 1000.0;
+        self.afFilter.gain = 0.5;
+        _average = NAN;
     }
     
     return self;
@@ -45,8 +36,8 @@
 {
     // Make sure that the temporary arrays are big enough
     int samples = (int)[complexInput[@"real"] length] / sizeof(float);
-    if ([radioPower length] < (samples * sizeof(float))) {
-        [radioPower setLength:samples * sizeof(float)];
+    if ([self.radioPower length] < (samples * sizeof(float))) {
+        [self.radioPower setLength:samples * sizeof(float)];
     }
     
     // Down convert
@@ -55,25 +46,25 @@
     
     // Low-pass filter
     NSDictionary *filtered;
-    filtered = [IFFilter filterDict:baseBand];
+    filtered = [self.ifFilter filterDict:baseBand];
     
     // Get an array of signal power levels
-    getPower(filtered, radioPower, powerContext, .0001);
+    getPower(filtered, self.radioPower, powerContext, .0001);
     
     // Make a copy of the power for AM
-    NSMutableData *demodulated = [radioPower mutableCopy];
+    NSMutableData *demodulated = [self.radioPower mutableCopy];
     
     // Remove residual DC likely contributed from modulation depth
-    removeDC(demodulated, &average, .001);
+    removeDC(demodulated, &_average, .001);
     
     // Audio Frequency filter
     NSMutableData *audioFiltered;
-    audioFiltered = (NSMutableData *)[AFFilter filterData:demodulated];
+    audioFiltered = (NSMutableData *)[self.afFilter filterData:demodulated];
     
     // Iterate through the audio and mute sections that are too low
     // for now, just use a manual squelch threshold
     
-    const float *powerSamples = [radioPower bytes];
+    const float *powerSamples = [self.radioPower bytes];
 //    float *audioSamples = [audioFiltered mutableBytes];
     double newAverage = 0;
     
@@ -87,37 +78,28 @@
 //        audioSamples[i] = audioSamples[i] / 30.;
     }
 
-    // Copy average power into the rfPower variable
-    COCOARADIO_DEMODAVERAGE((int)(rfPower * 1000));
-    rfPower = newAverage * 10;
-    
-//    float duration = [complexInput[@"real"] length] / self.rfSampleRate;
-//    return [[NSMutableData alloc] initWithLength:(self.afSampleRate * duration)];
+    // Copy average power into the rfPower property
+    COCOARADIO_DEMODAVERAGE((int)(self.rfPower * 1000));
+    self.rfPower = newAverage * 10.0;
     
     // Rational resampling
-    NSData *audio;
-    audio = [AFResampler resample:audioFiltered];
-    
-    return audio;
+    return [self.afResampler resample:audioFiltered];
 }
 
-// Override the defaults as appropriate for WBFM
-- (float)ifMaxBandwidth
-{
-    return  100000;
-}
-
+// accessors for read-only properties
 - (float)ifMinBandwidth
 {
-    return   15000;
+    return 15000.0;
 }
 
-// Stereo WBFM Radio has a pilot tone at 19KHz.  It's better to
-// filter this signal out.  Therefore, we'll set the maximum af
-// frequency to 18 KHz + a 1KHz skirt width.
+- (float)ifMaxBandwidth
+{
+    return 100000.0;
+}
+
 - (float)afMaxBandwidth
 {
-    return 18000;
+    return 9000.0;
 }
 
 @end

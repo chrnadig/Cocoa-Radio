@@ -14,37 +14,42 @@
 
 @implementation CSDRDemod
 
-- (id)initWithRFRate:(float)rfRate
-              AFRate:(float)afRate
+// factory class method
++ (CSDRDemod *)demodulatorWithScheme:(NSString *)scheme
 {
-    self = [super init];
-    if (self != nil) {
-        
+    if ([scheme caseInsensitiveCompare:@"WBFM"] == NSOrderedSame) {
+        return [[CSDRDemodWBFM alloc] init];
+    } else if ([scheme caseInsensitiveCompare:@"NBFM"] == NSOrderedSame) {
+        return [[CSDRDemodNBFM alloc] init];
+    } else if ([scheme caseInsensitiveCompare:@"AM"] == NSOrderedSame) {
+        return [[CSDRDemodAM alloc] init];
+    }
+    return nil;
+}
+
+// designated initializer
+- (id)initWithRFRate:(float)rfRate AFRate:(float)afRate
+{
+    if (self = [super init]) {
         // Setup the intermediate frequency filter
-        IFFilter = [[CSDRlowPassComplex alloc] init];
-        [IFFilter setGain:1.];
-        
+        _ifFilter = [CSDRlowPassComplex new];
+        _ifFilter.gain = 1.0;
         // Setup the audio frequency filter
-        AFFilter = [[CSDRlowPassFloat alloc] init];
-        [AFFilter setGain:.5];
-        
+        _afFilter = [CSDRlowPassFloat new];
+        _afFilter.gain = 0.5;
         // Setup the audio frequency rational resampler
-        AFResampler = [[CSDRResampler alloc] init];
-        
+        _afResampler = [CSDRResampler new];
         // Set default sample rates (this will set decimation and interpolation)
         _rfSampleRate = rfRate;
         _rfCorrectedRate = rfRate;
-        IFFilter.sampleRate = rfRate;
-        
-        self.afSampleRate = afRate;
-        AFFilter.sampleRate = afRate;
-        
+        _ifFilter.sampleRate = rfRate;
+        _afSampleRate = afRate;
+        _afFilter.sampleRate = afRate;
         // Assume nyquist for the AFFilter
-        AFFilter.bandwidth  = self.afSampleRate / 2.;
-        AFFilter.skirtWidth = 10000;
-        
-        self.squelch = 0.;
-        radioPower = [[NSMutableData alloc] init];
+        _afFilter.bandwidth  = afRate / 2.0;
+        _afFilter.skirtWidth = 10000.0;
+        _squelch = 0.0;
+        _radioPower = [NSMutableData new];
     }
     
     return self;
@@ -56,27 +61,10 @@
     return [self initWithRFRate:2048000 AFRate:48000];
 }
 
+// demodulate sampled data
 - (NSData *)demodulateData:(NSDictionary *)complexInput
 {
-    NSLog(@"Demodulating in the base class!");
-    
-    return nil;
-}
-
-+ (CSDRDemod *)demodulatorWithScheme:(NSString *)scheme
-{
-    if ([scheme caseInsensitiveCompare:@"WBFM"] == NSOrderedSame) {
-        return [[CSDRDemodWBFM alloc] init];
-    }
-
-    if ([scheme caseInsensitiveCompare:@"NBFM"] == NSOrderedSame) {
-        return [[CSDRDemodNBFM alloc] init];
-    }
-    
-    if ([scheme caseInsensitiveCompare:@"AM"] == NSOrderedSame) {
-        return [[CSDRDemodAM alloc] init];
-    }
-    
+    [[NSException exceptionWithName:@"CSDRDemodException" reason:@"Demodulating in the base class!" userInfo:nil] raise];
     return nil;
 }
 
@@ -93,144 +81,107 @@ int gcd(int a, int b) {
 {
     // Get the GCD between sample rates (makes ints)
     int GCD = gcd(self.rfCorrectedRate, self.afSampleRate);
-    
-    int interpolator = self.afSampleRate / GCD;
-    int decimator    = self.rfCorrectedRate / GCD;
-    
-    [AFResampler setInterpolator:interpolator];
-    [AFResampler setDecimator:decimator];
-
-    if (decimator == 0) {
+#warning replace with input/output rate instead of interpolator and decimator?
+    self.afResampler.interpolator = self.afSampleRate / GCD;
+    self.afResampler.decimator = self.rfCorrectedRate / GCD;
+    if (self.afResampler.decimator == 0) {
         NSLog(@"Setting decimator to 0!");
     }
-    
-//    NSLog(@"Set resample ratio to %d/%d", interpolator, decimator);
 }
 
 #pragma mark Getters and Setters
 - (void)setRfSampleRate:(float)rfSampleRate
 {
-    _rfSampleRate = rfSampleRate;
     // Assume corrected rate equals requested until known better
-    _rfCorrectedRate = rfSampleRate;
-    
-    [IFFilter setSampleRate:_rfSampleRate];
-    [AFFilter setSampleRate:_rfSampleRate];
-    
+    _rfSampleRate = rfSampleRate;
+    self.rfCorrectedRate = self.ifFilter.sampleRate = self.afFilter.sampleRate = rfSampleRate;
     [self calculateResampleRatio];
-}
-
-- (float)rfSampleRate
-{
-    return _rfSampleRate;
-}
-
-- (void)setRfCorrectedRate:(float)rate
-{
-    _rfCorrectedRate = rate;
-    [self calculateResampleRatio];
-}
-
-- (float)rfCorrectedRate
-{
-    return _rfCorrectedRate;
 }
 
 - (void)setAfSampleRate:(float)afSampleRate
 {
     _afSampleRate = afSampleRate;
-    
     [self calculateResampleRatio];
-}
-
-- (float)afSampleRate
-{
-    return _afSampleRate;
 }
 
 - (void)setIfBandwidth:(float)ifBandwidth
 {
-    [IFFilter setBandwidth:ifBandwidth];
+    self.ifFilter.bandwidth = ifBandwidth;
 }
 
 - (float)ifBandwidth
 {
-    return [IFFilter bandwidth];
+    return self.ifFilter.bandwidth;
 }
 
 - (void)setIfSkirtWidth:(float)ifSkirtWidth
 {
-    [IFFilter setSkirtWidth:ifSkirtWidth];
+    self.ifFilter.skirtWidth = ifSkirtWidth;
 }
 
 - (float)ifSkirtWidth
 {
-    return [IFFilter skirtWidth];
+    return self.ifFilter.skirtWidth;
 }
 
 - (void)setAfBandwidth:(float)afBandwidth
 {
-    [AFFilter setBandwidth:afBandwidth];
+    self.afFilter.bandwidth = afBandwidth;
 }
 
 - (float)afBandwidth
 {
-    return [AFFilter bandwidth];
+    return self.afFilter.bandwidth;
 }
 
 - (void)setAfSkirtWidth:(float)afSkirtWidth
 {
-    [AFFilter setSkirtWidth:afSkirtWidth];
+    self.afFilter.skirtWidth = afSkirtWidth;
 }
 
 - (float)afSkirtWidth
 {
-    return [AFFilter skirtWidth];
+    return self.afFilter.skirtWidth;
 }
 
 - (float)rfGain
 {
-    return [IFFilter gain];
+    return self.ifFilter.gain;
 }
 
 - (void)setRfGain:(float)rfGain
 {
-    [IFFilter setGain:rfGain];
+    self.ifFilter.gain = rfGain;
 }
 
 - (float)afGain
 {
-    return [AFFilter gain];
+    return self.afFilter.gain;
 }
 
 - (void)setAfGain:(float)afGain
 {
-    [AFFilter setGain:afGain];
+    self.afFilter.gain = afGain;
 }
 
 - (float)ifMaxBandwidth
 {
-    return 100000000;
+    return 100000000.0;
 }
 
 - (float)ifMinBandwidth
 {
-    return      1000;
+    return 1000.0;
 }
 
 - (float)afMaxBandwidth
 {
-    return _afSampleRate / 2.;
+    return self.afSampleRate / 2.0;
 }
 
 - (float)afMinBandwidth
 {
-    return 1000;
-}
-
-- (float)rfPower
-{
-    return rfPower;
+    return 1000.0;
 }
 
 @end

@@ -13,50 +13,40 @@
 @class CSDRResampler;
 
 @interface CSDRDemod : NSObject {
-    CSDRlowPassComplex *IFFilter;
-    CSDRlowPassFloat   *AFFilter;
-    CSDRResampler      *AFResampler;
-    
-    float _rfSampleRate;
-    float _afSampleRate;
-    
-    float _rfCorrectedRate;
-    
-    double average;
-    
-    float demodGain;
- 
-    float rfPower;
+
+#warning also remove!
     float powerContext[4];
-    NSMutableData *radioPower;
 }
 
+@property (strong) CSDRlowPassComplex *ifFilter;
+@property (strong) CSDRlowPassFloat *afFilter;
+@property (strong) CSDRResampler *afResampler;
+@property (strong) NSMutableData *radioPower;
+@property (assign, nonatomic) float rfSampleRate;
+@property (assign, nonatomic) float afSampleRate;
+@property (assign, nonatomic) float rfCorrectedRate;
+@property (assign, readonly) float ifMinBandwidth;
+@property (assign, readonly) float ifMaxBandwidth;
+@property (assign, readonly) float afMinBandwidth;
+@property (assign, readonly) float afMaxBandwidth;
+@property (assign) float rfPower;
+@property (assign) float centerFreq;
+@property (assign) float ifBandwidth;
+@property (assign) float ifSkirtWidth;
+@property (assign) float afBandwidth;
+@property (assign) float afSkirtWidth;
+@property (assign) float afGain;
+@property (assign) float rfGain;
+@property (assign) float dmGain;
+@property (assign) float squelch;
+
+// factory class method
++ (CSDRDemod *)demodulatorWithScheme:(NSString *)scheme;
+
+// designated initializer
 - (id)initWithRFRate:(float)rfRate AFRate:(float)afRate;
 
-@property (readwrite) float rfSampleRate;
-@property (readwrite) float afSampleRate;
-@property (readwrite) float rfCorrectedRate;
-
-@property (readwrite) float centerFreq;
-
-@property (readonly)  float ifMinBandwidth;
-@property (readonly)  float ifMaxBandwidth;
-@property (readwrite) float ifBandwidth;
-@property (readwrite) float ifSkirtWidth;
-
-@property (readonly)  float afMinBandwidth;
-@property (readonly)  float afMaxBandwidth;
-@property (readwrite) float afBandwidth;
-@property (readwrite) float afSkirtWidth;
-
-@property (readwrite) float afGain;
-@property (readwrite) float rfGain;
-
-@property (readonly)  float rfPower;
-@property (readwrite) float squelch;
-
+// demodulate sampled data
 - (NSData *)demodulateData:(NSDictionary *)complexInput;
-
-+ (CSDRDemod *)demodulatorWithScheme:(NSString *)scheme;
 
 @end

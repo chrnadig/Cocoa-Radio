@@ -435,6 +435,7 @@
     CSDRDemod *newDemodulator = [CSDRDemod demodulatorWithScheme:demodulationScheme];
     newDemodulator.rfSampleRate = rfSampleRate;
     newDemodulator.afSampleRate = afSampleRate;
+    newDemodulator.squelch = [self.squelch floatValue];
 
     // Setup the endpoints on the slider
     self.ifBandwidthSlider.maxValue = newDemodulator.ifMaxBandwidth;
