@@ -8,37 +8,31 @@
 
 #import <Foundation/Foundation.h>
 
-@interface CSDRfilter : NSObject {
-    float _gain;
-    float _bandwidth;
-    float _skirtWidth;
-    int _sampleRate;
-    
-    NSData *taps;
-    NSLock *tapsLock;
-}
+@interface CSDRfilter : NSObject
 
-@property (readwrite) float bandwidth;
-@property (readwrite) float skirtWidth;
-@property (readwrite) float gain;
-@property (readwrite) int sampleRate;
+@property (assign, nonatomic) float bandwidth;
+@property (assign, nonatomic) float skirtWidth;
+@property (assign, nonatomic) float gain;
+@property (assign) NSInteger sampleRate;
+@property (strong) NSData *taps;
+@property (strong) NSLock *tapsLock;
 
 @end
 
-@interface CSDRlowPassComplex : CSDRfilter {
-    size_t bufferSize;
-    NSMutableData *realBuffer;
-    NSMutableData *imagBuffer;
-}
+@interface CSDRlowPassComplex : CSDRfilter
+
+@property (assign) NSInteger bufferSize;
+@property (strong) NSMutableData *realBuffer;
+@property (strong) NSMutableData *imagBuffer;
 
 - (NSDictionary *)filterDict:(NSDictionary *)input;
 
 @end
 
-@interface CSDRlowPassFloat : CSDRfilter {
-    size_t bufferSize;
-    NSMutableData *buffer;
-}
+@interface CSDRlowPassFloat : CSDRfilter
+
+@property (assign) NSInteger bufferSize;
+@property (strong) NSMutableData *buffer;
 
 - (NSData *)filterData:(NSData *)input;
 

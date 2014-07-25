@@ -6,66 +6,68 @@
 //  Copyright (c) 2012 Oregon State University (COAS). All rights reserved.
 //
 
+#import <Accelerate/Accelerate.h>
 #import "CSDRFFT.h"
 #import "CSDRRingBuffer.h"
-#import <Accelerate/Accelerate.h>
 #import "dspprobes.h"
 
 @implementation CSDRFFT
 
 - (id)initWithSize:(int)initSize
 {
-    self = [super init];
-    if (self) {
+    if (self = [super init]) {
         // Integer ivars
-        counter = 0;
-        size = initSize;
-        log2n = log2(size);
-        if (exp2(log2n) != size) {
+        _size = initSize;
+        _log2n = log2(_size);
+        if (exp2(_log2n) != _size) {
             NSLog(@"Non power of 2 input size provided!");
             return nil;
         }
 
         // Allocate buffers
-        realBuffer = malloc(sizeof(double) * initSize);
-        imagBuffer = malloc(sizeof(double) * initSize);
+        _realBuffer = malloc(sizeof(double) * initSize);
+        _imagBuffer = malloc(sizeof(double) * initSize);
         
         // Magnitude data
-        magBuffer = [[NSMutableData alloc] initWithLength:sizeof(float) * initSize];
+        _magBuffer = [[NSMutableData alloc] initWithLength:sizeof(float) * initSize];
         
         // Processing synchronization and thread
-        ringCondition = [[NSCondition alloc] init];
-        [ringCondition setName:@"FFT Ring buffer condition"];
+        _lock = [[NSCondition alloc] init];
+        [_lock setName:@"FFT Ring buffer condition"];
 
-        fftThread = [[NSThread alloc] initWithTarget:self
-                                            selector:@selector(fftLoop)
-                                              object:nil];
-        [fftThread setName:@"com.us.alternet.cocoaradio.fftthread"];
-        [fftThread start];
+        _fftThread = [[NSThread alloc] initWithTarget:self selector:@selector(fftLoop) object:nil];
+        [_fftThread setName:@"com.us.alternet.cocoaradio.fftthread"];
+        [_fftThread start];
 
         // Ring buffers
-        int ringBufferCapacity = initSize * 1000;
-        realRingBuffer = [[CSDRRingBuffer alloc] initWithCapacity:ringBufferCapacity];
-        imagRingBuffer = [[CSDRRingBuffer alloc] initWithCapacity:ringBufferCapacity];
+        _realRingBuffer = [[CSDRRingBuffer alloc] initWithCapacity:initSize * 1000];
+        _imagRingBuffer = [[CSDRRingBuffer alloc] initWithCapacity:initSize * 1000];
     }
     
     return self;
+}
+
+- (void)dealloc
+{
+    [_fftThread cancel];
+    free(_realBuffer);
+    free(_imagBuffer);
 }
 
 // This function retreives the current FFT data
 // It finalizes the number of FFT operations and divides out the average
 - (void)updateMagnitudeData
 {
-    float *magValues = [magBuffer mutableBytes];
+    float *magValues = [self.magBuffer mutableBytes];
 
-    if (counter == 0) {
+    if (self.counter == 0) {
         return;
     }
     
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < self.size; i++) {
         // Compute the average
-        double real = realBuffer[i] / counter;
-        double imag = imagBuffer[i] / counter;
+        double real = self.realBuffer[i] / self.counter;
+        double imag = self.imagBuffer[i] / self.counter;
         
         // Compute the magnitude and put it in the mag array
         magValues[i] = sqrt((real * real) + (imag * imag));
@@ -73,18 +75,13 @@
     }
 
     if (COCOARADIO_FFTCOUNTER_ENABLED()) {
-        COCOARADIO_FFTCOUNTER(counter);
+        COCOARADIO_FFTCOUNTER((int)self.counter);
     }
 
-    counter = 0;
+    self.counter = 0;
 
-    bzero(realBuffer, size * sizeof(double));
-    bzero(imagBuffer, size * sizeof(double));
-}
-
-- (NSData *)magBuffer
-{
-    return magBuffer;
+    bzero(self.realBuffer, self.size * sizeof(double));
+    bzero(self.imagBuffer, self.size * sizeof(double));
 }
 
 - (void)fftLoop
@@ -95,21 +92,20 @@
         NSMutableData *outputRealData = [[NSMutableData alloc] initWithLength:2048 * sizeof(float)];
         NSMutableData *outputImagData = [[NSMutableData alloc] initWithLength:2048 * sizeof(float)];
         
-        // This is the threads "forever loop"
-        do {
+        // loop until thread is cancelled
+        while (![self.fftThread isCancelled]) {
             @autoreleasepool {
                 // Get some data from the ring buffer
-                [ringCondition lock];
-                if ([realRingBuffer fillLevel] < 2048 ||
-                    [imagRingBuffer fillLevel] < 2048) {
+                [self.lock lock];
+                if (self.realRingBuffer.fillLevel < 2048 || self.imagRingBuffer.fillLevel < 2048) {
                     [self updateMagnitudeData];
-                    [ringCondition wait];
+                    [self.lock wait];
                 }
                 
                 // Fill the imag and real arrays with data
-                [realRingBuffer fillData:inputRealData];
-                [imagRingBuffer fillData:inputImagData];
-                [ringCondition unlock];
+                [self.realRingBuffer fillData:inputRealData];
+                [self.imagRingBuffer fillData:inputImagData];
+                [self.lock unlock];
                 
                 // Perform the FFT
                 [self complexFFTinputReal:inputRealData
@@ -122,21 +118,21 @@
                                              imag:outputImagData];
                 
                 // Advance the accumulation counter
-                counter++;
+                self.counter++;
             }
-        } while (true);
+        }
     }
 }
 
 - (void)addSamplesReal:(NSData *)real imag:(NSData *)imag
 {
-    [ringCondition lock];
+    [self.lock lock];
     
-    [realRingBuffer storeData:real];
-    [imagRingBuffer storeData:imag];
+    [self.realRingBuffer storeData:real];
+    [self.imagRingBuffer storeData:imag];
     
-    [ringCondition signal];
-    [ringCondition unlock];
+    [self.lock signal];
+    [self.lock unlock];
 }
 
 - (void)complexFFTinputReal:(NSData *)inReal
@@ -148,7 +144,7 @@
     static FFTSetup setup = NULL;
     if (setup == NULL) {
         // Setup the FFT system (accelerate framework)
-        setup = vDSP_create_fftsetup(log2n, FFT_RADIX2);
+        setup = vDSP_create_fftsetup(self.log2n, FFT_RADIX2);
         if (setup == NULL)
         {
             printf("\nFFT_Setup failed to allocate enough memory.\n");
@@ -157,7 +153,7 @@
     }
     
     // Check that the inputs are the right size
-    int length = size * sizeof(float);
+    NSInteger length = self.size * sizeof(float);
     if ([inReal length]  != length ||
         [inImag length]  != length ||
         [outReal length] != length ||
@@ -185,7 +181,7 @@
     }
     
     // Perform the FFT
-    vDSP_fft_zop(setup, &input, 1, &output, 1, log2n, FFT_FORWARD );
+    vDSP_fft_zop(setup, &input, 1, &output, 1, self.log2n, FFT_FORWARD );
 }
 
 - (void)convertFFTandAccumulateReal:(NSMutableData *)real
@@ -195,14 +191,14 @@
     float *imagData = [imag mutableBytes];
     
     // Accumulate this data with what came before it, and re-order the values
-    for (int i = 0; i <= (size/2); i++) {
-        realBuffer[i] += realData[i + (size/2)];
-        imagBuffer[i] += imagData[i + (size/2)];
+    for (NSInteger i = 0; i <= self.size / 2; i++) {
+        self.realBuffer[i] += realData[i + self.size / 2];
+        self.imagBuffer[i] += imagData[i + self.size / 2];
     }
     
-    for (int i = 0; i <  (size/2); i++) {
-        realBuffer[i + (size/2)] += realData[i];
-        imagBuffer[i + (size/2)] += imagData[i];
+    for (NSInteger i = 0; i <  self.size / 2; i++) {
+        self.realBuffer[i + self.size / 2] += realData[i];
+        self.imagBuffer[i + self.size / 2] += imagData[i];
     }
 }
 
