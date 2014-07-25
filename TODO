@@ -1,4 +1,20 @@
+General:
+- replace property access in loops by local variables
+- replace (id) with (instancetype) in -init… methods
+- replace .y and x. float with x.y floats
+- replace alloc/init with new
+- revisit NSConditions/NSLocks - eliminate when not needed
+- remove all @synthesize occurrences
+
 
 CSDRRingBuffer:
 - replace NSMutableData with float *malloc()
 - maybe simpler implementation?
+
+CSDRFFT:
+- replace log2 calculation with loop instead of log2() function call
+- the two ring buffers (real and imag) could possibly overflow independantly, causing real and imag data to desync (although not possible in current implementation, might become a problem in the future)
+
+CSDRfilter:
+- Rename (uppercase F)
+- Split into multiple files (there are subclasses defined and implemented in same files)
