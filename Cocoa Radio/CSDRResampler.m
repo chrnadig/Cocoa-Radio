@@ -12,11 +12,10 @@
 
 - (id)init
 {
-    self = [super init];
-    if (self != nil) {
-        lastSample = 0.;
-        self.interpolator = 1;
-        self.decimator = 1;
+    if (self = [super init]) {
+        _lastSample = 0.0;
+        _interpolator = 1;
+        _decimator = 1;
     }
     
     return self;
@@ -25,14 +24,11 @@
 // This method is a convenience wrapper for the resampleFrom method
 - (NSData *)resample:(NSData *)input
 {
-    int inputSize  = (int)[input  length] / sizeof(float);
-    
-    int outputSize = (inputSize * self.interpolator) / self.decimator;
-    
+    NSInteger inputSize  = [input  length] / sizeof(float);
+    NSInteger outputSize = (inputSize * self.interpolator) / self.decimator;
     NSMutableData *outData = [[NSMutableData alloc] initWithLength:outputSize * sizeof(float)];
     
     [self resampleFrom:input to:outData];
-    
     return outData;
 }
 
@@ -50,8 +46,8 @@
 {
     const float *inputFloats = [input bytes];
     float *outputFloats = [output mutableBytes];
-    int inputSize  = (int)[input  length] / sizeof(float);
-    int outputSize = (int)[output length] / sizeof(float);
+    NSInteger inputSize  = [input  length] / sizeof(float);
+    NSInteger outputSize = [output length] / sizeof(float);
     
     // Make sure that the output array is the correct size.
     if (outputSize != ((inputSize * self.interpolator) / self.decimator)) {
@@ -67,7 +63,7 @@
     
     // Perform the main loop for the resampler
     for (int i = 0; i < outputSize; i++) {
-        int virtualSampleIndex = i * self.decimator;
+        NSInteger virtualSampleIndex = i * self.decimator;
         float inputSampleFloat = (float)virtualSampleIndex / (float)(self.interpolator);
         
         // For each output sample, compute its nearest input indices
@@ -80,7 +76,7 @@
         // Assign the result.  Special case for samples falling
         // the first sample of this block
         if (highInputIndex == 0) {
-            outputFloats[i]  = lastSample * ratio;
+            outputFloats[i]  = self.lastSample * ratio;
             outputFloats[i] += inputFloats[highInputIndex] * (1. - ratio);
         } else {
             outputFloats[i]  = inputFloats[lowInputIndex]  * ratio;
@@ -89,7 +85,7 @@
     }
     
     // Save the last sample
-    lastSample = inputFloats[inputSize - 1];
+    self.lastSample = inputFloats[inputSize - 1];
 }
 
 @end

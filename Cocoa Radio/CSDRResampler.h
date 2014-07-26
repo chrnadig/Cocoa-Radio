@@ -8,12 +8,11 @@
 
 #import <Foundation/Foundation.h>
 
-@interface CSDRResampler : NSObject {
-    float lastSample;
-}
+@interface CSDRResampler : NSObject
 
-@property (readwrite) int interpolator;
-@property (readwrite) int decimator;
+@property (assign) NSInteger interpolator;
+@property (assign) NSInteger decimator;
+@property (assign) float lastSample;
 
 - (void)resampleFrom:(NSData *)input to:(NSMutableData *)output;
 - (NSData *)resample:(NSData *)input;
