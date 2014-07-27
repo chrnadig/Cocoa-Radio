@@ -48,7 +48,7 @@
     filtered = [self.ifFilter filterDict:baseBand];
     
     // Get an array of signal power levels for squelch
-    getPower(filtered, self.radioPower, powerContext, .0001);
+    getPower(filtered, self.radioPower, &_powerContext, .0001);
     
     // Quadrature demodulation
     float dGain = self.dmGain + self.rfSampleRate / (2 * M_PI * self.ifFilter.bandwidth);

@@ -49,7 +49,7 @@
     filtered = [self.ifFilter filterDict:baseBand];
     
     // Get an array of signal power levels
-    getPower(filtered, self.radioPower, powerContext, .0001);
+    getPower(filtered, self.radioPower, &_powerContext, .0001);
     
     // Make a copy of the power for AM
     NSMutableData *demodulated = [self.radioPower mutableCopy];

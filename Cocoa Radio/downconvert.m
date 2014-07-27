@@ -362,7 +362,7 @@ void removeDC(NSMutableData *data, double *average, double alpha)
 }
 
 // requires a 4-element float context array
-void getPower(NSDictionary *input, NSMutableData *output, float context[4], double alpha)
+void getPower(NSDictionary *input, NSMutableData *output, struct dsp_context *context, double alpha)
 {
     NSData *realData = input[@"real"];
     NSData *imagData = input[@"imag"];
@@ -385,17 +385,17 @@ void getPower(NSDictionary *input, NSMutableData *output, float context[4], doub
     // Calcluate the magnitudes from the input array (starting at index 2)
     vDSP_zvmags(&complexInput, 1, &tempInput[2], 1, length);
     // Copy the context into the first two spots
-    memcpy(tempInput, context, 2 * sizeof(float));
+    memcpy(tempInput, &context->floats[0], 2 * sizeof(float));
     // Copy the context into the start of the output
-    memcpy(tempOutput, &context[2], 2 * sizeof(float));
+    memcpy(tempOutput, &context->floats[2], 2 * sizeof(float));
     
     // Setup the IIR as a 2 pole, 2 zero differential equation
     float coeff[5] = {1. - alpha, 0., 0., -1 * alpha, 0.};
     vDSP_deq22(tempInput, 1, coeff, tempOutput, 1, length);
     
     // Copy the context info out
-    memcpy(context, &tempInput[length], 2 * sizeof(float));
-    memcpy(&context[2], &tempOutput[length], 2 * sizeof(float));
+    memcpy(&context->floats[0], &tempInput[length], 2 * sizeof(float));
+    memcpy(&context->floats[2], &tempOutput[length], 2 * sizeof(float));
     
     // Calculate the dbs of the resuling value
     float zeroRef = 1.;
@@ -418,7 +418,7 @@ void getPower(NSDictionary *input, NSMutableData *output, float context[4], doub
     vDSP_vsmul(tempInput, 1, &falpha, tempInput, 1, length);
     
     // Compute the power average
-    float average = context[0];
+    float average = context->floats[0];
     for (int i = 0; i < length; i++) {
         // Magnitude using sum of squares
         float magnitude = tempInput[i];
@@ -433,7 +433,7 @@ void getPower(NSDictionary *input, NSMutableData *output, float context[4], doub
     vDSP_vdbcon(tempOutput, 1, &zeroRef, outSamples, 1, length, 0);
 
     // Book keeping
-    context[0] = average;
+    context->floats[0] = average;
     free(tempInput);
     free(tempOutput);
 #endif

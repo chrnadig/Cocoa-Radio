@@ -17,6 +17,11 @@
 
 @class AudioSink;
 
+// data structure for DSP context
+struct dsp_context {
+    float floats[4];
+};
+
 double subtractTimes( uint64_t endTime, uint64_t startTime );
 
 NSDictionary *freqXlate(NSDictionary *inputDict, float localOscillator, int sampleRate);
@@ -27,6 +32,6 @@ NSDictionary *createComplexTone(int samples, float sampleRate, float frequency, 
 void removeDC(NSMutableData *data, double *average, double alpha);
 
 // Calculate power level from the given signal (log 10)
-void getPower(NSDictionary *input, NSMutableData *output, float context[4], double alpha);
+void getPower(NSDictionary *input, NSMutableData *output, struct dsp_context *context, double alpha);
 
 #endif

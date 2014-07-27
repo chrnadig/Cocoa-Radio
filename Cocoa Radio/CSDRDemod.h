@@ -12,11 +12,7 @@
 @class CSDRlowPassFloat;
 @class CSDRResampler;
 
-@interface CSDRDemod : NSObject {
-
-#warning also remove!
-    float powerContext[4];
-}
+@interface CSDRDemod : NSObject
 
 @property (strong) CSDRlowPassComplex *ifFilter;
 @property (strong) CSDRlowPassFloat *afFilter;
