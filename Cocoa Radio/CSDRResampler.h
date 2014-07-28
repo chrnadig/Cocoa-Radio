@@ -10,9 +10,9 @@
 
 @interface CSDRResampler : NSObject
 
-@property (assign) NSInteger interpolator;
-@property (assign) NSInteger decimator;
-@property (assign) float lastSample;
+@property (readwrite) NSInteger interpolator;
+@property (readwrite) NSInteger decimator;
+@property (readwrite) float lastSample;
 
 - (void)resampleFrom:(NSData *)input to:(NSMutableData *)output;
 - (NSData *)resample:(NSData *)input;

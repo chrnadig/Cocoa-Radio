@@ -10,7 +10,7 @@
 
 @interface CSDRDemodNBFM : CSDRDemod
 
-@property (assign) double average;
-@property (assign) struct dsp_context powerContext;
+@property (readwrite) double average;
+@property (readwrite) struct dsp_context powerContext;
 
 @end

@@ -13,11 +13,11 @@
 
 @interface CSDRRingBuffer : NSObject
 
-@property (strong) NSCondition *lock;
-@property (assign) float *space;
-@property (assign) NSUInteger size;
-@property (assign) NSUInteger rp;
-@property (assign) NSUInteger wp;
+@property (readwrite) NSCondition *lock;
+@property (readwrite) float *space;
+@property (readwrite) NSUInteger size;
+@property (readwrite) NSUInteger rp;
+@property (readwrite) NSUInteger wp;
 
 @property (readonly) NSInteger fillLevel;
 @property (readonly) NSInteger capacity;

@@ -12,16 +12,16 @@
 
 @interface CSDRFFT : NSObject
 
-@property (assign) double *realBuffer;
-@property (assign) double *imagBuffer;
-@property (assign) NSInteger counter;
-@property (assign) NSInteger size;
-@property (assign) NSInteger log2n;
-@property (strong) NSMutableData *magBuffer;
-@property (strong) NSCondition *lock;
-@property (strong) NSThread *fftThread;
-@property (strong) CSDRRingBuffer *realRingBuffer;
-@property (strong) CSDRRingBuffer *imagRingBuffer;
+@property (readwrite) double *realBuffer;
+@property (readwrite) double *imagBuffer;
+@property (readwrite) NSInteger counter;
+@property (readwrite) NSInteger size;
+@property (readwrite) NSInteger log2n;
+@property (readwrite) NSMutableData *magBuffer;
+@property (readwrite) NSCondition *lock;
+@property (readwrite) NSThread *fftThread;
+@property (readwrite) CSDRRingBuffer *realRingBuffer;
+@property (readwrite) CSDRRingBuffer *imagRingBuffer;
 
 
 - (id)initWithSize:(int)size;

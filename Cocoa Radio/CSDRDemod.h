@@ -14,27 +14,27 @@
 
 @interface CSDRDemod : NSObject
 
-@property (strong) CSDRlowPassComplex *ifFilter;
-@property (strong) CSDRlowPassFloat *afFilter;
-@property (strong) CSDRResampler *afResampler;
-@property (strong) NSMutableData *radioPower;
-@property (assign, nonatomic) float rfSampleRate;
-@property (assign, nonatomic) float afSampleRate;
-@property (assign, nonatomic) float rfCorrectedRate;
-@property (assign, readonly) float ifMinBandwidth;
-@property (assign, readonly) float ifMaxBandwidth;
-@property (assign, readonly) float afMinBandwidth;
-@property (assign, readonly) float afMaxBandwidth;
-@property (assign) float rfPower;
-@property (assign) float centerFreq;
-@property (assign) float ifBandwidth;
-@property (assign) float ifSkirtWidth;
-@property (assign) float afBandwidth;
-@property (assign) float afSkirtWidth;
-@property (assign) float afGain;
-@property (assign) float rfGain;
-@property (assign) float dmGain;
-@property (assign) float squelch;
+@property (readwrite) CSDRlowPassComplex *ifFilter;
+@property (readwrite) CSDRlowPassFloat *afFilter;
+@property (readwrite) CSDRResampler *afResampler;
+@property (readwrite) NSMutableData *radioPower;
+@property (readwrite, nonatomic) float rfSampleRate;
+@property (readwrite, nonatomic) float afSampleRate;
+@property (readwrite, nonatomic) float rfCorrectedRate;
+@property (readwrite) float ifMinBandwidth;
+@property (readwrite) float ifMaxBandwidth;
+@property (readwrite) float afMinBandwidth;
+@property (readwrite) float afMaxBandwidth;
+@property (readwrite) float rfPower;
+@property (readwrite) float centerFreq;
+@property (readwrite) float ifBandwidth;
+@property (readwrite) float ifSkirtWidth;
+@property (readwrite) float afBandwidth;
+@property (readwrite) float afSkirtWidth;
+@property (readwrite) float afGain;
+@property (readwrite) float rfGain;
+@property (readwrite) float dmGain;
+@property (readwrite) float squelch;
 
 // factory class method
 + (CSDRDemod *)demodulatorWithScheme:(NSString *)scheme;

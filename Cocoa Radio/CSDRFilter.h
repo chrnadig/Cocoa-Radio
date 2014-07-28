@@ -10,12 +10,12 @@
 
 @interface CSDRfilter : NSObject
 
-@property (assign, nonatomic) float bandwidth;
-@property (assign, nonatomic) float skirtWidth;
-@property (assign, nonatomic) float gain;
-@property (assign) NSInteger sampleRate;
-@property (strong) NSData *taps;
-@property (strong) NSLock *tapsLock;
+@property (readwrite, nonatomic) float bandwidth;
+@property (readwrite, nonatomic) float skirtWidth;
+@property (readwrite, nonatomic) float gain;
+@property (readwrite) NSInteger sampleRate;
+@property (readwrite) NSData *taps;
+@property (readwrite) NSLock *tapsLock;
 
 @end
 
