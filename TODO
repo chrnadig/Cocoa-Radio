@@ -28,3 +28,6 @@ CSDRlowPassComplex:
 CSDRDemod (and subclasses):
 - return bandwith/frequency etc. ranges in struct instead of min/max readonly methods
 - move common demodulation code to base class!
+
+CSDRAudioDevice:
+- split into two files (there are two classes now)

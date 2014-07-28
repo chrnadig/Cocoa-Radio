@@ -13,10 +13,7 @@
 
 @class CSDRRingBuffer;
 
-@interface CSDRAudioDevice : NSObject
-{
-    bool _running;
-    bool _prepared;
+@interface CSDRAudioDevice : NSObject {
     
     AudioUnit unit;
 
@@ -28,29 +25,29 @@
 
 }
 
+@property (readwrite) int sampleRate;
+@property (readwrite) int blockSize;
+@property (readonly) BOOL running;
+@property (readwrite) int deviceID;
+@property (readwrite) BOOL mute;
+
 + (NSArray *)deviceDict;
 
 - (id)initWithRate:(float)sampleRate;
 
 - (CSDRRingBuffer *)ringBuffer;
 
-- (bool)prepare;
+- (BOOL)prepare;
 - (void)unprepare;
 
-- (bool)start;
+- (BOOL)start;
 - (void)stop;
-
-@property (readwrite) int sampleRate;
-@property (readwrite) int blockSize;
-@property (readonly) bool running;
-@property (readwrite) int deviceID;
-@property (readwrite) bool mute;
 
 @end
 
 @interface CSDRAudioOutput : CSDRAudioDevice
 {
-    bool discontinuity;
+    BOOL discontinuity;
 }
 
 - (void)bufferData:(NSData *)data;
@@ -60,7 +57,7 @@
 // frequency change, then, when the buffer re-fills to 1/2 full,
 // playing will resume.
 - (void)markDiscontinuity;
-- (bool)discontinuity;
+- (BOOL)discontinuity;
 
 
 @end

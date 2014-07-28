@@ -6,40 +6,41 @@
 //  Copyright (c) 2012. All rights reserved.
 //
 
+#import <CoreAudio/CoreAudio.h>
+#import <AudioToolbox/AudioUnitUtilities.h>
+#import <mach/mach_time.h>
 #import "CSDRAudioDevice.h"
 #import "CSDRRingBuffer.h"
 #import "CSDRAppDelegate.h"
-
-#import <CoreAudio/CoreAudio.h>
-#import <AudioToolbox/AudioUnitUtilities.h>
-
-#include "audioprobes.h"
-
-#import <mach/mach_time.h>
+#import "audioprobes.h"
 
 double subtractTimes(uint64_t end, uint64_t start);
 
+static NSString *audioSourceNameKey                 = @"audioSourceName";
+static NSString *audioSourceNominalSampleRateKey    = @"audioSourceNominalSampleRate";
+static NSString *audioSourceAvailableSampleRatesKey = @"audioSourceAvailableSampleRates";
+static NSString *audioSourceInputChannelsKey        = @"audioSourceInputChannels";
+static NSString *audioSourceOutputChannelsKey       = @"audioSourceOutputChannels";
+static NSString *audioSourceDeviceIDKey             = @"audioSourceDeviceID";
+static NSString *audioSourceDeviceUIDKey            = @"audioSourceDeviceUID";
+
+// private declarations
+@interface CSDRAudioDevice ()
+@property (readwrite) BOOL running;
+#warning prepared not done yet
+@property (readwrite) BOOL prepared;
+@end
+
 @implementation CSDRAudioDevice
 
-NSString *audioSourceNameKey = @"audioSourceName";
-NSString *audioSourceNominalSampleRateKey = @"audioSourceNominalSampleRate";
-NSString *audioSourceAvailableSampleRatesKey = @"audioSourceAvailableSampleRates";
-NSString *audioSourceInputChannelsKey = @"audioSourceInputChannels";
-NSString *audioSourceOutputChannelsKey = @"audioSourceOutputChannels";
-NSString *audioSourceDeviceIDKey = @"audioSourceDeviceID";
-NSString *audioSourceDeviceUIDKey = @"audioSourceDeviceUID";
 
-@synthesize sampleRate;
-@synthesize blockSize;
-
-NSMutableArray *devices;
-
-+ (void)initDeviceDict
++ (NSArray *)initDeviceDict
 {
     // Variables used for each of the functions
     UInt32 propertySize = 0;
     Boolean writable = NO;
     AudioObjectPropertyAddress property;
+    NSMutableArray *devices;
     
     // Get the size of the device IDs array
     property.mSelector = kAudioHardwarePropertyDevices;
@@ -183,14 +184,16 @@ NSMutableArray *devices;
         // Add this new device dict to the array and release it
         [devices addObject:deviceDict];
     }
+    return [devices copy];
 }
 
 +(NSArray *)deviceDict
 {
+    static NSArray *devices;
     static dispatch_once_t dictOnceToken;
     dispatch_once(&dictOnceToken, ^{
-        [CSDRAudioDevice initDeviceDict];});
-    
+        devices = [CSDRAudioDevice initDeviceDict];
+    });
     return devices;
 }
 
@@ -199,12 +202,12 @@ NSMutableArray *devices;
     return;
 }
 
-- (bool)prepare
+- (BOOL)prepare
 {
     return NO;
 }
 
-- (bool)start
+- (BOOL)start
 {
     return NO;
 }
@@ -256,11 +259,6 @@ NSMutableArray *devices;
     }
     
     return self;
-}
-
-- (bool)running
-{
-    return _running;
 }
 
 - (CSDRRingBuffer *)ringBuffer
@@ -400,9 +398,9 @@ OSStatus OutputProc(void *inRefCon,
     return self;
 }
 
-- (bool)prepare
+- (BOOL)prepare
 {
-    if (_prepared == YES) {
+    if (self.prepared == YES) {
         return YES;
     }
     
@@ -468,13 +466,13 @@ OSStatus OutputProc(void *inRefCon,
                          &output,
                          sizeof(output));
     
-    _prepared = YES;
+    self.prepared = YES;
     return YES;
 }
 
-- (bool)start
+- (BOOL)start
 {
-    if (!_prepared) {
+    if (!self.prepared) {
         if (![self prepare]) return NO;
     }
     
@@ -485,13 +483,13 @@ OSStatus OutputProc(void *inRefCon,
     err = AudioOutputUnitStart(auHAL);
     if(err) return NO;
 
-    _running = YES;
+    self.running = YES;
     discontinuity = NO;
 
     return YES;
 }
 
--(bool)discontinuity
+-(BOOL)discontinuity
 {
     return discontinuity;
 }
