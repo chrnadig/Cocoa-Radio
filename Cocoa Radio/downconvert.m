@@ -348,6 +348,7 @@ void removeDC(NSMutableData *data, double *average, double alpha)
     int length = (int)[data length] / sizeof(float);
     float *realSamples = [data mutableBytes];
 
+#if 0
     // Bootstrap DC offset correction and handle bad floats
     if (!isfinite(*average)) {
         *average = realSamples[0];
@@ -359,6 +360,13 @@ void removeDC(NSMutableData *data, double *average, double alpha)
         *average = (*average * (1. - alpha)) + (realSamples[i] * alpha);
         realSamples[i] = realSamples[i] - *average;
     }
+#else
+    float m;
+    vDSP_meanv(realSamples, 1, &m, length);
+    m = -m;
+    vDSP_vsadd(realSamples, 1, &m, realSamples, 1, length);
+    *average = -m;
+#endif
 }
 
 // requires a 4-element float context array

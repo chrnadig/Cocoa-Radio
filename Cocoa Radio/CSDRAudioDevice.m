@@ -186,7 +186,7 @@ static NSString *audioSourceDeviceUIDKey            = @"audioSourceDeviceUID";
     return [devices copy];
 }
 
-+(NSArray *)deviceDict
++ (NSArray *)deviceDict
 {
     static NSArray *devices;
     static dispatch_once_t dictOnceToken;

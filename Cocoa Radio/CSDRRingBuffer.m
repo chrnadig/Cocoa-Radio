@@ -30,9 +30,20 @@
     return nil;
 }
 
+- (void)dealloc
+{
+    if (_space != NULL) {
+        free(_space);
+    }
+}
+
 - (NSInteger)fillLevel
 {
-    return self.wp - self.rp;
+    NSUInteger level;
+    [self.lock lock];
+    level = self.wp - self.rp;
+    [self.lock unlock];
+    return level;
 }
 
 - (NSInteger)capacity
