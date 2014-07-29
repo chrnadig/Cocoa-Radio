@@ -28,6 +28,8 @@ static NSString *audioSourceDeviceUIDKey            = @"audioSourceDeviceUID";
 @interface CSDRAudioDevice ()
 @property (readwrite) BOOL running;
 @property (readwrite) BOOL prepared;
+@property (readwrite) AudioComponentInstance auHAL;
+@property (readwrite) CSDRRingBuffer *ringBuffer;
 @end
 
 @implementation CSDRAudioDevice
@@ -196,98 +198,88 @@ static NSString *audioSourceDeviceUIDKey            = @"audioSourceDeviceUID";
     return devices;
 }
 
-- (void)unprepare
-{
-    return;
-}
-
-- (BOOL)prepare
-{
-    return NO;
-}
-
-- (BOOL)start
-{
-    return NO;
-}
-
-- (void)stop
-{
-    return;
-}
-
 - (id)init
 {
-    self = [super init];
-    if (self != nil) {
-        // This code is generic for input and output
-        // subclasses refine it further
+    if (self = [super init]) {
+        // this code is generic for input and output subclasses refine it further
+        // !! this code is from Apple Technical Note TN2091. There are several different types of Audio Units.
+        // some audio units serve as Outputs, Mixers, or DSP units. See AUComponent.h for listing
+        AudioComponentDescription audioDescription;
+        AudioComponent audioComponent;
         
-        // !! this code is from Apple Technical Note TN2091
-        //There are several different types of Audio Units.
-        //Some audio units serve as Outputs, Mixers, or DSP
-        //units. See AUComponent.h for listing
-        desc.componentType = kAudioUnitType_Output;
+        audioDescription.componentType = kAudioUnitType_Output;
         
-        //Every Component has a subType, which will give a clearer picture
-        //of what this components function will be.
-        desc.componentSubType = kAudioUnitSubType_HALOutput;
+        // every Component has a subType, which will give a clearer picture of what this components function will be.
+        audioDescription.componentSubType = kAudioUnitSubType_HALOutput;
         
-        //all Audio Units in AUComponent.h must use
-        //"kAudioUnitManufacturer_Apple" as the Manufacturer
-        desc.componentManufacturer = kAudioUnitManufacturer_Apple;
-        desc.componentFlags = 0;
-        desc.componentFlagsMask = 0;
+        // all Audio Units in AUComponent.h must use "kAudioUnitManufacturer_Apple" as the Manufacturer
+        audioDescription.componentManufacturer = kAudioUnitManufacturer_Apple;
+        audioDescription.componentFlags = 0;
+        audioDescription.componentFlagsMask = 0;
         
-        //Finds a component that meets the desc spec's
-        comp = AudioComponentFindNext(NULL, &desc);
-        if (comp == NULL) return nil;
-        
-        //gains access to the services provided by the component
-        AudioComponentInstanceNew(comp, &auHAL);
+        // finds a component that meets audioDescription spec's
+        audioComponent = AudioComponentFindNext(NULL, &audioDescription);
+        if (audioComponent != NULL) {
+            // gains access to the services provided by the component
+            AudioComponentInstanceNew(audioComponent, &_auHAL);
+            return self;
+        }
     }
-    
-    return self;
+    // something went wrong
+    return nil;
 }
 
 - (id)initWithRate:(float)newSampleRate
 {
-    self = [self init];
-    if (self != nil) {
+    if (self = [self init]) {
         self.sampleRate = newSampleRate;
     }
     
     return self;
 }
 
-- (CSDRRingBuffer *)ringBuffer
+- (void)unprepare
 {
-    return ringBuffer;
+    [[NSException exceptionWithName:@"CSDRAudioDeviceException" reason:@"-unprepare called in base class" userInfo:nil] raise];
+}
+
+- (BOOL)prepare
+{
+    [[NSException exceptionWithName:@"CSDRAudioDeviceException" reason:@"-prepare called in base class" userInfo:nil] raise];
+    return NO;
+}
+
+- (BOOL)start
+{
+    [[NSException exceptionWithName:@"CSDRAudioDeviceException" reason:@"-start called in base class" userInfo:nil] raise];
+    return NO;
+}
+
+- (void)stop
+{
+    [[NSException exceptionWithName:@"CSDRAudioDeviceException" reason:@"-stop called in base class" userInfo:nil] raise];
 }
 
 @end
 
 @implementation CSDRAudioOutput
 
-OSStatus OutputProc(void *inRefCon,
-                    AudioUnitRenderActionFlags *ioActionFlags,
-                    const AudioTimeStamp *TimeStamp,
-                    UInt32 inBusNumber,
-                    UInt32 inNumberFrames,
-                    AudioBufferList * ioData)
+OSStatus OutputProc(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *TimeStamp,
+                    UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList * ioData)
 {
     @autoreleasepool {
-        CSDRAudioOutput *device = (__bridge CSDRAudioOutput *)inRefCon;
-        CSDRRingBuffer *ringBuffer = [device ringBuffer];
         
-        // Determine whether this will have a buffer underflow,
-        // if so, trigger a discontinuity.  Perhaps, it'll be less
+        CSDRAudioOutput *device = (__bridge CSDRAudioOutput *)inRefCon;
+        CSDRRingBuffer *ringBuffer = device.ringBuffer;
+        static uint64_t last_buffer_time;
+
+        // determine whether this will have a buffer underflow, if so, trigger a discontinuity.  Perhaps, it'll be less
         // jarring to have one longer discontinuity than many smaller ones
-        if ([ringBuffer fillLevel] < inNumberFrames) {
+        if (ringBuffer.fillLevel < inNumberFrames) {
             [device markDiscontinuity];
         }
         
-        // During a period of discontinuity, produce silence
+        // during a period of discontinuity, produce silence
         if (device.discontinuity) {
             for (int i = 0; i < ioData->mNumberBuffers; i++) {
                 bzero(ioData->mBuffers[i].mData, ioData->mBuffers[i].mDataByteSize);
@@ -296,27 +288,23 @@ OSStatus OutputProc(void *inRefCon,
         }
         
         // Load some data out of the ring buffer
-        [ringBuffer fetchFrames:inNumberFrames
-                           into:ioData];
+        [ringBuffer fetchFrames:inNumberFrames into:ioData];
         
-        static uint64_t last_buffer_time = 0;
-        // Attempt to determine whether the buffer backlog is increasing
+        // attempt to determine whether the buffer backlog is increasing
         if (COCOARADIOAUDIO_AUDIOBUFFER_ENABLED()) {
             uint64_t this_time = TimeStamp->mHostTime;
             double deltaTime = subtractTimes(this_time, last_buffer_time);
-            
             double derivedSampleRate = inNumberFrames / deltaTime;
-            
+            int fillLevel = ringBuffer.fillLevel;
             int deltaTime_us;
+            
             if (last_buffer_time == 0) {
                 deltaTime_us = 0;
             } else {
                 deltaTime_us = deltaTime * 1000000;
             }
-            
             last_buffer_time = this_time;
-            
-            int fillLevel = [ringBuffer fillLevel];
+
             COCOARADIOAUDIO_AUDIOBUFFER((int)derivedSampleRate, fillLevel);
         }
 
@@ -329,139 +317,78 @@ OSStatus OutputProc(void *inRefCon,
 
         // Copy the data to other channels
         for (int i = 1; i < ioData->mNumberBuffers; i++) {
-            memcpy(ioData->mBuffers[i].mData,
-                   ioData->mBuffers[0].mData,
-                   ioData->mBuffers[i].mDataByteSize);
+            memcpy(ioData->mBuffers[i].mData, ioData->mBuffers[0].mData, ioData->mBuffers[i].mDataByteSize);
         }
-        
         return noErr;
     }
 }
 
 - (id)init
 {
-    self = [super init];
-    if (self != nil) {
-        
-        // !! this code is from Apple Technical Note TN2091
-        // This code disables the "input bus" of the HAL
-        UInt32 enableIO;
-        
-        UInt32 size;
-        OSStatus err =noErr;
-        size = sizeof(AudioDeviceID);
-
-        //TODO: change these calls to non-deprecated functions
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-
-        // Select the default device
-        AudioDeviceID outputDevice;
-        err = AudioHardwareGetProperty(kAudioHardwarePropertyDefaultOutputDevice,
-                                       &size,
-                                       &outputDevice);
-
-#pragma clang diagnostic pop
-
-        if (err) return nil;
-        
-        err = AudioUnitSetProperty(auHAL,
-                                   kAudioOutputUnitProperty_CurrentDevice,
-                                   kAudioUnitScope_Global,
-                                   0,
-                                   &outputDevice,
-                                   sizeof(outputDevice));
-
-        //When using AudioUnitSetProperty the 4th parameter in the method
-        //refer to an AudioUnitElement. When using an AudioOutputUnit
-        //the input element will be '1' and the output element will be '0'.
-        
-        enableIO = 0;
-        AudioUnitSetProperty(auHAL,
-                             kAudioOutputUnitProperty_EnableIO,
-                             kAudioUnitScope_Input,
-                             1, // input element
-                             &enableIO,
-                             sizeof(enableIO));
-        
-        enableIO = 1;
-        AudioUnitSetProperty(auHAL,
-                             kAudioOutputUnitProperty_EnableIO,
-                             kAudioUnitScope_Output,
-                             0,   //output element
-                             &enableIO,
-                             sizeof(enableIO));
-        
+    if (self = [super init]) {
+        // this code is from Apple Technical Note TN2091. this code disables the "input bus" of the HAL
+        AudioDeviceID outputDevice = kAudioObjectUnknown;
+        AudioObjectPropertyAddress property_address = { kAudioHardwarePropertyDefaultOutputDevice, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMaster };
+        UInt32 size = sizeof(AudioDeviceID);
+        OSStatus err = AudioObjectGetPropertyData(kAudioObjectSystemObject, &property_address, 0, NULL, &size, &outputDevice);
+        if (err == noErr) {
+            err = AudioUnitSetProperty(self.auHAL, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &outputDevice, sizeof(outputDevice));
+            if (err == noErr) {
+                // when using AudioUnitSetProperty the 4th parameter in the method refer to an AudioUnitElement. When using an AudioOutputUnit
+                // the input element will be '1' and the output element will be '0'.
+                UInt32 enableIO = 0;
+                // disable input
+                AudioUnitSetProperty(self.auHAL, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input, 1, &enableIO, sizeof(enableIO));
+                // enable output
+                enableIO = 1;
+                AudioUnitSetProperty(self.auHAL, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Output, 0, &enableIO, sizeof(enableIO));
+                return self;
+            }
+        }
     }
-    
-    return self;
+    // something went wrong
+    return nil;
 }
 
 - (BOOL)prepare
 {
     if (!self.prepared) {
-        // Setup the device characteristics
+        UInt32 size = sizeof(AudioStreamBasicDescription);
+        Float64 trySampleRate = self.sampleRate;
         AudioStreamBasicDescription deviceFormat;
         AudioStreamBasicDescription desiredFormat;
-        
+        AURenderCallbackStruct output = { OutputProc, (__bridge void *)self };
         int channels = 1;
-        desiredFormat.mFormatID = kAudioFormatLinearPCM;
-        desiredFormat.mSampleRate = self.sampleRate;
+        OSStatus err;
+        
+        // setup the device characteristics
+        desiredFormat.mFormatID         = kAudioFormatLinearPCM;
+        desiredFormat.mSampleRate       = self.sampleRate;
         desiredFormat.mChannelsPerFrame = channels;
-        desiredFormat.mBitsPerChannel  = 8 * sizeof(float);
-        desiredFormat.mBytesPerFrame   = sizeof(float) * channels;
-        desiredFormat.mBytesPerPacket  = sizeof(float) * channels;
-        desiredFormat.mFramesPerPacket = 1;
-        desiredFormat.mFormatFlags = kLinearPCMFormatFlagIsFloat |
-        kLinearPCMFormatFlagIsPacked;
+        desiredFormat.mBitsPerChannel   = 8 * sizeof(float);
+        desiredFormat.mBytesPerFrame    = sizeof(float) * channels;
+        desiredFormat.mBytesPerPacket   = sizeof(float) * channels;
+        desiredFormat.mFramesPerPacket  = 1;
+        desiredFormat.mFormatFlags      = kLinearPCMFormatFlagIsFloat | kLinearPCMFormatFlagIsPacked;
         
-        //set format to output scope
-        AudioUnitSetProperty(auHAL,
-                             kAudioUnitProperty_StreamFormat,
-                             kAudioUnitScope_Input, 0,
-                             &desiredFormat,
-                             sizeof(AudioStreamBasicDescription));
+        // set format to output scope
+        AudioUnitSetProperty(self.auHAL, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &desiredFormat, sizeof(AudioStreamBasicDescription));
         
-        UInt32 size = sizeof(AudioStreamBasicDescription);
+        // attempt to set the sample rate (so far, this isn't working)
+        err = AudioUnitSetProperty(self.auHAL, kAudioUnitProperty_SampleRate, kAudioUnitScope_Output, 0, &trySampleRate, sizeof(trySampleRate));
         
-        // Attempt to set the sample rate (so far, this isn't working)
-        OSStatus err =noErr;
-        Float64 trySampleRate = self.sampleRate;
-        err = AudioUnitSetProperty(auHAL,
-                                   kAudioUnitProperty_SampleRate,
-                                   kAudioUnitScope_Output, 0,
-                                   &trySampleRate,
-                                   sizeof(trySampleRate));
+        trySampleRate = 0.0;
+        err = AudioUnitGetProperty(self.auHAL, kAudioUnitProperty_SampleRate, kAudioUnitScope_Output, 0, &trySampleRate, &size);
         
-        trySampleRate = 0.;
-        err = AudioUnitGetProperty(auHAL,
-                                   kAudioUnitProperty_SampleRate,
-                                   kAudioUnitScope_Output, 0,
-                                   &trySampleRate,
-                                   &size);
+        // get the device format back
+        AudioUnitGetProperty (self.auHAL, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &deviceFormat, &size);
         
-        //Get the device format back
-        AudioUnitGetProperty (auHAL,
-                              kAudioUnitProperty_StreamFormat,
-                              kAudioUnitScope_Input, 0,
-                              &deviceFormat,
-                              &size);
+        // create a ring buffer for the audio (1 second worth of data)
+        self.ringBuffer = [[CSDRRingBuffer alloc] initWithCapacity:self.sampleRate];
         
-        // Create a ring buffer for the audio (1 second worth of data)
-        ringBuffer = [[CSDRRingBuffer alloc] initWithCapacity:self.sampleRate];
-        
-        // Setup the callback
-        AURenderCallbackStruct output;
-        output.inputProc = OutputProc;
-        output.inputProcRefCon = (__bridge void *)(self);
-    	
-        AudioUnitSetProperty(auHAL,
-                             kAudioUnitProperty_SetRenderCallback,
-                             kAudioUnitScope_Input,
-                             0,
-                             &output,
-                             sizeof(output));
-        
+        // setup the callback
+        AudioUnitSetProperty(self.auHAL, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &output, sizeof(output));
+
         self.prepared = YES;
     }
     return YES;
@@ -469,25 +396,20 @@ OSStatus OutputProc(void *inRefCon,
 
 - (BOOL)start
 {
-    OSStatus err;
-    
     if (!self.prepared) {
         if (![self prepare]) {
             return NO;
         }
     }
-    
-    err = AudioUnitInitialize(auHAL);
-    if (err) {
+
+    if (AudioUnitInitialize(self.auHAL) != noErr) {
         return NO;
     }
-    err = AudioOutputUnitStart(auHAL);
-    if (err) {
+    if (AudioOutputUnitStart(self.auHAL) != noErr) {
         return NO;
     }
     self.running = YES;
     discontinuity = NO;
-
     return YES;
 }
 
@@ -500,28 +422,23 @@ OSStatus OutputProc(void *inRefCon,
 {
     // NSLog(@"Marking audio discontinuity.");
     discontinuity = YES;
-    // [ringBuffer clear];
+    // [self.ringBuffer clear];
 }
 
 -(void)bufferData:(NSData *)data
 {
-//    int length = [data length] / sizeof(float);
-    
-    [ringBuffer storeData:data];
+    [self.ringBuffer storeData:data];
 
     // If it's not started yet, wait until 1/8 of a second is available
     if (!self.running) {
-        if ([ringBuffer fillLevel] >= ([ringBuffer capacity] / 8)) {
+        if (self.ringBuffer.fillLevel >= self.ringBuffer.capacity / 8) {
             [self start];
         }
     } else if (discontinuity) {
-        if ([ringBuffer fillLevel] >= ([ringBuffer capacity] / 8)) {
+        if (self.ringBuffer.fillLevel >= self.ringBuffer.capacity / 8) {
             discontinuity = false;
         }
     }
-    
-    return;
-    
 }
 
 - (void)audioAvailable:(NSNotification *)notification
