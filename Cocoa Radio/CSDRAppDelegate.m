@@ -21,6 +21,9 @@
 #import "dspRoutines.h"
 #import "dspprobes.h"
 
+// set to 0 for dummy testinput
+#define TESTINPUT   0
+
 // This block size sets the frequency that the read loop runs
 // sample rate / block size = block rate
 #define BLOCKSIZE    20480
@@ -122,7 +125,7 @@
 
         // Process the samples for visualization with the FFT
         [fftProcessor addSamplesReal:realData imag:imagData];
-        
+
         // Perform all the demodulation on the demodulation thread
         NSDictionary *complexRaw = @{ @"real" : realData, @"imag" : imagData };
 
@@ -181,12 +184,33 @@
 //    CFRelease(radioSampleRate);
 }
 
+#if TESTINPUT
+// dummy thread for testing
+- (void)dummyReceiverLoop:(id)obj
+{
+    uint8_t buf[BLOCKSIZE];
+    float duration = 1.0 / rfSampleRate * BLOCKSIZE;
+    NSData *data = [NSData dataWithBytesNoCopy:buf length:BLOCKSIZE];
+    for (int i = 0; i < BLOCKSIZE; i += 2) {
+        buf[i] = buf[i+1] = rand();
+    }
+    while (1) {
+        [self processRFBlock:data withDuration:duration];
+        [NSThread sleepForTimeInterval:duration];
+    }
+}
+#endif
+
 - (void)prepareRadioDevice
 {
     // Instanciate an RTL SDR device (choose the first)
     NSArray *deviceList = [RTLSDRDevice deviceList];
     if ([deviceList count] == 0) {
         // Display an error and close
+#if TESTINPUT
+        // start dummy data thread for testing
+        [NSThread detachNewThreadSelector:@selector(dummyReceiverLoop:) toTarget:self withObject:nil];
+#else
         NSAlert *alert = [NSAlert alertWithMessageText:@"No device found"
                                          defaultButton:@"Close"
                                        alternateButton:nil
@@ -199,6 +223,7 @@
         // Shut down the app
         NSApplication *app = [NSApplication sharedApplication];
         [app stop:self];
+#endif
         return;
     }
     
