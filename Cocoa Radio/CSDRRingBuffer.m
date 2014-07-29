@@ -9,6 +9,15 @@
 #import "CSDRRingBuffer.h"
 #include "audioprobes.h"
 
+// private declarations
+@interface CSDRRingBuffer ()
+@property (readwrite) NSCondition *lock;
+@property (readwrite) float *space;
+@property (readwrite) NSUInteger rp;
+@property (readwrite) NSUInteger wp;
+@property (readwrite) NSInteger fillLevel;
+@end
+
 @implementation CSDRRingBuffer
 
 - (id)init
@@ -22,7 +31,7 @@
         _lock = [NSCondition new];
         _space = malloc(capacity * sizeof(float));
         if (_space != NULL) {
-            _size = capacity;
+            _capacity = capacity;
             return self;
         }
     }
@@ -37,23 +46,11 @@
     }
 }
 
-- (NSInteger)fillLevel
-{
-    NSUInteger level;
-    [self.lock lock];
-    level = self.wp - self.rp;
-    [self.lock unlock];
-    return level;
-}
-
-- (NSInteger)capacity
-{
-    return self.size;
-}
-
 - (void)clear
 {
+    [self.lock lock];
     self.rp = self.wp = 0;
+    [self.lock unlock];
 }
 
 - (void)storeData:(NSData *)newData
@@ -62,7 +59,6 @@
     NSUInteger n = [newData length] / sizeof(float);
     
     [self.lock lock];
-    
     // DTrace it
 #warning needed?
     if (COCOARADIOAUDIO_RINGBUFFERFILL_ENABLED()) {
@@ -71,23 +67,25 @@
     
     while (n > 0) {
         // determine maximum size we can write - it's either all or up to the end of the buffer
-        NSUInteger m = MIN(self.size - (self.wp % self.size), n);
-        memcpy(&self.space[self.wp % self.size], src, m * sizeof(float));
+        NSUInteger m = MIN(self.capacity - (self.wp % self.capacity), n);
+        memcpy(&self.space[self.wp % self.capacity], src, m * sizeof(float));
         self.wp += m;
         src += m;
         n -= m;
     }
     // detect overflow
-    if (self.wp > self.rp + self.size) {
+    if (self.wp > self.rp + self.capacity) {
         NSLog(@"Buffer overrun!");
-        self.rp = self.wp - self.size;
+        self.rp = self.wp - self.capacity;
     }
     // keep rp and wp in the range of 0 to 2 * size - 1
-    if (self.rp >= self.size) {
-        NSUInteger offset = self.rp - (self.rp % self.size);
+    if (self.rp >= self.capacity) {
+        NSUInteger offset = self.rp - (self.rp % self.capacity);
         self.rp -= offset;
         self.wp -= offset;
     }
+    // update fillLevel
+    self.fillLevel = self.wp - self.rp;
     [self.lock unlock];
 }
 
@@ -95,7 +93,6 @@
 - (void)moveFrames:(NSUInteger)n to:(float *)dst
 {
     [self.lock lock];
-
     // DTrace it
 #warning needed?
     if (COCOARADIOAUDIO_RINGBUFFEREMPTY_ENABLED()) {
@@ -104,8 +101,8 @@
 
     while (n > 0) {
         // determine maximum size we can read - it's either all or up to the end of the buffer
-        NSUInteger m = MIN(self.size - (self.rp % self.size), n);
-        memcpy(dst, &self.space[self.rp % self.size], m * sizeof(float));
+        NSUInteger m = MIN(self.capacity - (self.rp % self.capacity), n);
+        memcpy(dst, &self.space[self.rp % self.capacity], m * sizeof(float));
         self.rp += m;
         dst += m;
         n -= m;
@@ -117,12 +114,13 @@
         self.wp = self.rp;
     }
     // keep rp and wp in the range of 0 to 2 * size - 1
-    if (self.rp >= self.size) {
-        NSUInteger offset = self.rp - (self.rp % self.size);
+    if (self.rp >= self.capacity) {
+        NSUInteger offset = self.rp - (self.rp % self.capacity);
         self.rp -= offset;
         self.wp -= offset;
     }
-    
+    // update fillLevel
+    self.fillLevel = self.wp - self.rp;
     [self.lock unlock];
 }
 

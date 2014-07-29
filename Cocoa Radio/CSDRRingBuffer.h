@@ -13,12 +13,6 @@
 
 @interface CSDRRingBuffer : NSObject
 
-@property (readwrite) NSCondition *lock;
-@property (readwrite) float *space;
-@property (readwrite) NSUInteger size;
-@property (readwrite) NSUInteger rp;
-@property (readwrite) NSUInteger wp;
-
 @property (readonly) NSInteger fillLevel;
 @property (readonly) NSInteger capacity;
 
@@ -28,7 +22,6 @@
 - (void)fetchFrames:(NSUInteger)nFrames into:(AudioBufferList *)ioData;
 - (void)fillData:(NSMutableData *)data;
 
-// Discard the contents
 - (void)clear;
 
 @end

@@ -18,11 +18,11 @@
 + (CSDRDemod *)demodulatorWithScheme:(NSString *)scheme
 {
     if ([scheme caseInsensitiveCompare:@"WBFM"] == NSOrderedSame) {
-        return [[CSDRDemodWBFM alloc] init];
+        return [CSDRDemodWBFM new];
     } else if ([scheme caseInsensitiveCompare:@"NBFM"] == NSOrderedSame) {
-        return [[CSDRDemodNBFM alloc] init];
+        return [CSDRDemodNBFM new];
     } else if ([scheme caseInsensitiveCompare:@"AM"] == NSOrderedSame) {
-        return [[CSDRDemodAM alloc] init];
+        return [CSDRDemodAM new];
     }
     return nil;
 }

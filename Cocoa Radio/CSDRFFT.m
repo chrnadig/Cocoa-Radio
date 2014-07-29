@@ -97,6 +97,7 @@
             @autoreleasepool {
                 // Get some data from the ring buffer
                 [self.lock lock];
+#warning this should be a while loop!
                 if (self.realRingBuffer.fillLevel < 2048 || self.imagRingBuffer.fillLevel < 2048) {
                     [self updateMagnitudeData];
                     [self.lock wait];
