@@ -27,7 +27,6 @@ static NSString *audioSourceDeviceUIDKey            = @"audioSourceDeviceUID";
 // private declarations
 @interface CSDRAudioDevice ()
 @property (readwrite) BOOL running;
-#warning prepared not done yet
 @property (readwrite) BOOL prepared;
 @end
 
@@ -400,89 +399,92 @@ OSStatus OutputProc(void *inRefCon,
 
 - (BOOL)prepare
 {
-    if (self.prepared == YES) {
-        return YES;
-    }
-    
-// Setup the device characteristics
-    AudioStreamBasicDescription deviceFormat;
-    AudioStreamBasicDescription desiredFormat;
-    
-    int channels = 1;
-    desiredFormat.mFormatID = kAudioFormatLinearPCM;
-    desiredFormat.mSampleRate = self.sampleRate;
-    desiredFormat.mChannelsPerFrame = channels;
-    desiredFormat.mBitsPerChannel  = 8 * sizeof(float);
-    desiredFormat.mBytesPerFrame   = sizeof(float) * channels;
-    desiredFormat.mBytesPerPacket  = sizeof(float) * channels;
-    desiredFormat.mFramesPerPacket = 1;
-    desiredFormat.mFormatFlags = kLinearPCMFormatFlagIsFloat |
-                                 kLinearPCMFormatFlagIsPacked;
-    
-//set format to output scope
-    AudioUnitSetProperty(auHAL,
-                         kAudioUnitProperty_StreamFormat,
-                         kAudioUnitScope_Input, 0,
-                         &desiredFormat,
-                         sizeof(AudioStreamBasicDescription));
-
-    UInt32 size = sizeof(AudioStreamBasicDescription);
-    
-// Attempt to set the sample rate (so far, this isn't working)
-    OSStatus err =noErr;
-    Float64 trySampleRate = self.sampleRate;
-    err = AudioUnitSetProperty(auHAL,
-                               kAudioUnitProperty_SampleRate,
-                               kAudioUnitScope_Output, 0,
-                               &trySampleRate,
-                               sizeof(trySampleRate));
-
-    trySampleRate = 0.;
-    err = AudioUnitGetProperty(auHAL,
-                               kAudioUnitProperty_SampleRate,
-                               kAudioUnitScope_Output, 0,
-                               &trySampleRate,
-                               &size);
-    
-//Get the device format back
-    AudioUnitGetProperty (auHAL,
-                          kAudioUnitProperty_StreamFormat,
-                          kAudioUnitScope_Input, 0,
-                          &deviceFormat,
-                          &size);
-    
-// Create a ring buffer for the audio (1 second worth of data)
-    ringBuffer = [[CSDRRingBuffer alloc] initWithCapacity:self.sampleRate];
-    
-// Setup the callback
-    AURenderCallbackStruct output;
-    output.inputProc = OutputProc;
-    output.inputProcRefCon = (__bridge void *)(self);
+    if (!self.prepared) {
+        // Setup the device characteristics
+        AudioStreamBasicDescription deviceFormat;
+        AudioStreamBasicDescription desiredFormat;
+        
+        int channels = 1;
+        desiredFormat.mFormatID = kAudioFormatLinearPCM;
+        desiredFormat.mSampleRate = self.sampleRate;
+        desiredFormat.mChannelsPerFrame = channels;
+        desiredFormat.mBitsPerChannel  = 8 * sizeof(float);
+        desiredFormat.mBytesPerFrame   = sizeof(float) * channels;
+        desiredFormat.mBytesPerPacket  = sizeof(float) * channels;
+        desiredFormat.mFramesPerPacket = 1;
+        desiredFormat.mFormatFlags = kLinearPCMFormatFlagIsFloat |
+        kLinearPCMFormatFlagIsPacked;
+        
+        //set format to output scope
+        AudioUnitSetProperty(auHAL,
+                             kAudioUnitProperty_StreamFormat,
+                             kAudioUnitScope_Input, 0,
+                             &desiredFormat,
+                             sizeof(AudioStreamBasicDescription));
+        
+        UInt32 size = sizeof(AudioStreamBasicDescription);
+        
+        // Attempt to set the sample rate (so far, this isn't working)
+        OSStatus err =noErr;
+        Float64 trySampleRate = self.sampleRate;
+        err = AudioUnitSetProperty(auHAL,
+                                   kAudioUnitProperty_SampleRate,
+                                   kAudioUnitScope_Output, 0,
+                                   &trySampleRate,
+                                   sizeof(trySampleRate));
+        
+        trySampleRate = 0.;
+        err = AudioUnitGetProperty(auHAL,
+                                   kAudioUnitProperty_SampleRate,
+                                   kAudioUnitScope_Output, 0,
+                                   &trySampleRate,
+                                   &size);
+        
+        //Get the device format back
+        AudioUnitGetProperty (auHAL,
+                              kAudioUnitProperty_StreamFormat,
+                              kAudioUnitScope_Input, 0,
+                              &deviceFormat,
+                              &size);
+        
+        // Create a ring buffer for the audio (1 second worth of data)
+        ringBuffer = [[CSDRRingBuffer alloc] initWithCapacity:self.sampleRate];
+        
+        // Setup the callback
+        AURenderCallbackStruct output;
+        output.inputProc = OutputProc;
+        output.inputProcRefCon = (__bridge void *)(self);
     	
-	AudioUnitSetProperty(auHAL,
-                         kAudioUnitProperty_SetRenderCallback,
-                         kAudioUnitScope_Input,
-                         0,
-                         &output,
-                         sizeof(output));
-    
-    self.prepared = YES;
+        AudioUnitSetProperty(auHAL,
+                             kAudioUnitProperty_SetRenderCallback,
+                             kAudioUnitScope_Input,
+                             0,
+                             &output,
+                             sizeof(output));
+        
+        self.prepared = YES;
+    }
     return YES;
 }
 
 - (BOOL)start
 {
+    OSStatus err;
+    
     if (!self.prepared) {
-        if (![self prepare]) return NO;
+        if (![self prepare]) {
+            return NO;
+        }
     }
     
-    OSStatus err = noErr;
     err = AudioUnitInitialize(auHAL);
-    if(err) return NO;
-
+    if (err) {
+        return NO;
+    }
     err = AudioOutputUnitStart(auHAL);
-    if(err) return NO;
-
+    if (err) {
+        return NO;
+    }
     self.running = YES;
     discontinuity = NO;
 
@@ -496,9 +498,9 @@ OSStatus OutputProc(void *inRefCon,
 
 - (void)markDiscontinuity
 {
-//    NSLog(@"Marking audio discontinuity.");
+    // NSLog(@"Marking audio discontinuity.");
     discontinuity = YES;
-//    [ringBuffer clear];
+    // [ringBuffer clear];
 }
 
 -(void)bufferData:(NSData *)data
