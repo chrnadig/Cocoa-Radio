@@ -35,7 +35,7 @@
 
 - (void)demodLoop
 {
-    [NSThread setThreadPriority:1.];
+    [NSThread setThreadPriority:1.0];
     
     do {
         @autoreleasepool {

@@ -13,17 +13,7 @@
 
 @class CSDRRingBuffer;
 
-@interface CSDRAudioDevice : NSObject {
-    
-    AudioUnit unit;
-
-    AudioComponent comp;
-    AudioComponentDescription desc;
-    AudioComponentInstance auHAL;
-    
-    CSDRRingBuffer *ringBuffer;
-
-}
+@interface CSDRAudioDevice : NSObject
 
 @property (readwrite) int sampleRate;
 @property (readwrite) int blockSize;
