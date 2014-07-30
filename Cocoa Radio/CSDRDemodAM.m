@@ -18,8 +18,8 @@
         self.ifFilter.bandwidth  = 90000.0;
         self.ifFilter.skirtWidth = 20000.0;
         self.ifFilter.gain = 1.0;
-        self.afFilter.bandwidth  = 9000.0;
-        self.afFilter.skirtWidth = 1000.0;
+        self.afFilter.bandwidth  = 18000.0;
+        self.afFilter.skirtWidth = 10000.0;
         self.afFilter.gain = 0.5;
         _average = NAN;
     }
