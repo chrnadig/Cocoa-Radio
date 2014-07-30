@@ -13,26 +13,17 @@
 @property (readwrite, nonatomic) float bandwidth;
 @property (readwrite, nonatomic) float skirtWidth;
 @property (readwrite, nonatomic) float gain;
-@property (readwrite) NSInteger sampleRate;
-@property (readwrite) NSData *taps;
-@property (readwrite) NSLock *tapsLock;
+@property (readwrite, nonatomic) NSInteger sampleRate;
 
 @end
 
 @interface CSDRlowPassComplex : CSDRfilter
-
-@property (assign) NSInteger bufferSize;
-@property (strong) NSMutableData *realBuffer;
-@property (strong) NSMutableData *imagBuffer;
 
 - (NSDictionary *)filterDict:(NSDictionary *)input;
 
 @end
 
 @interface CSDRlowPassFloat : CSDRfilter
-
-@property (assign) NSInteger bufferSize;
-@property (strong) NSMutableData *buffer;
 
 - (NSData *)filterData:(NSData *)input;
 

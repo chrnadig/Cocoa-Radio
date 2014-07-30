@@ -22,7 +22,7 @@
 #import "dspprobes.h"
 
 // set to 0 for dummy testinput
-#define TESTINPUT   0
+#define TESTINPUT   1
 
 // This block size sets the frequency that the read loop runs
 // sample rate / block size = block rate

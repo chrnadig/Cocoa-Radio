@@ -7,21 +7,22 @@
 //
 
 #import "CSDRFilter.h"
-
 #import <Accelerate/Accelerate.h>
 #import <mach/mach_time.h>
-
 #include "dspRoutines.h"
 
 #define ACCELERATE
+
+// private declarations
+@interface CSDRfilter ()
+@property (readwrite) NSData *taps;
+@end
 
 @implementation CSDRfilter
 
 - (id)init
 {
     if (self = [super init]) {
-        // TODO: lock is probably not needed when working with local variables
-        _tapsLock = [NSLock new];
         _sampleRate = -1;
         _skirtWidth = -1;
         _bandwidth = -1;
@@ -88,9 +89,7 @@
     }
     
     // Update the taps
-    [self.tapsLock lock];
     self.taps = tempTaps;
-    [self.tapsLock unlock];
     
     free(window);
 }
@@ -98,83 +97,67 @@
 - (void)setGain:(float)gain
 {
     // Did it really change?
-    if (_gain == gain) {
-        return;
+    if (gain != _gain) {
+        _gain = gain;
+        // re-compute the taps
+        [self computeTaps];
     }
-    
-    _gain = gain;
-    
-    // Re-compute the taps
-    [self computeTaps];
 }
 
 - (void)setBandwidth:(float)bandwidth
 {
-    // Did it really change?
-    if (_bandwidth == bandwidth) {
-        return;
-    }
-    
-    if (self.sampleRate < 0.) {
+    // did it really change?
+    if (bandwidth != _bandwidth) {
+        if (self.sampleRate < 0.0) {
+            _bandwidth = bandwidth;
+            return;
+        }
+        if (bandwidth <= 0.0 || bandwidth  > self.sampleRate / 2.0) {
+            NSLog(@"Filter bandwidth must be less than half sample rate and greater than zero.");
+            return;
+        }
         _bandwidth = bandwidth;
-        return;
+        // re-compute the taps
+        [self computeTaps];
     }
-    
-    if (bandwidth <= 0. ||
-        bandwidth  > (self.sampleRate / 2.)) {
-        NSLog(@"Filter bandwidth must be less than half sample rate and greater than zero.");
-        return;
-    }
-    
-    _bandwidth = bandwidth;
-    
-    // Re-compute the taps
-    [self computeTaps];
 }
 
 - (void)setSkirtWidth:(float)skirtWidth
 {
-    // Did it really change?
-    if (_skirtWidth == skirtWidth) {
-        return;
+    // did it really change?
+    if (skirtWidth != _skirtWidth) {
+        if (skirtWidth > 0.0) {
+            _skirtWidth = skirtWidth;
+            // re-compute the taps
+            [self computeTaps];
+        } else {
+            NSLog(@"Filter Skirt Width must be greater than zero!");
+        }
     }
-    
-    if (skirtWidth <= 0.) {
-        NSLog(@"Filter Skirt Width must be greater than zero.");
-    }
-    
-    _skirtWidth = skirtWidth;
-    
-    // Re-compute the taps
-    [self computeTaps];
 }
 
 - (void)setSampleRate:(NSInteger)sampleRate
 {
-    // Did it really change?
-    if (_sampleRate == sampleRate) {
-        return;
+    // did it really change?
+    if (sampleRate != _sampleRate) {
+        if (sampleRate > 0.0) {
+            _sampleRate = sampleRate;
+            // re-compute the taps
+            [self computeTaps];
+        } else {
+            NSLog(@"Sample rate must be greater than zero!");
+        }
     }
-    
-    if (sampleRate <= 0.) {
-        NSLog(@"Sample rate must be greater than zero.");
-        return;
-    }
-    
-    _sampleRate = sampleRate;
-    
-    // Re-compute the taps
-    [self computeTaps];
 }
 
 // Print the taps
 -(NSString *)description
 {
     NSMutableString *outputString = [[NSMutableString alloc] init];
-    
-    int num_taps = (int)[self.taps length] / sizeof(float);
-    const float *tapsData = [self.taps bytes];
-    for (int i = 0; i < num_taps; i++) {
+    NSData *taps = self.taps;
+    NSUInteger num_taps = [taps length] / sizeof(float);
+    const float *tapsData = [taps bytes];
+    for (NSUInteger i = 0; i < num_taps; i++) {
         [outputString appendFormat:i != num_taps - 1 ? @"%f, " : @"%f", tapsData[i]];
     }
     return outputString;
@@ -182,8 +165,24 @@
 
 @end
 
+
+// private declarations
+@interface CSDRlowPassComplex ()
+@property (readwrite) NSInteger bufferSize;
+@property (readwrite) NSMutableData *realBuffer;
+@property (readwrite) NSMutableData *imagBuffer;
+@end
+
 @implementation CSDRlowPassComplex
 
+- (instancetype)init
+{
+    if (self = [super init]) {
+        _realBuffer = [NSMutableData new];
+        _imagBuffer = [NSMutableData new];
+    }
+    return self;
+}
 
 - (NSDictionary *)filterDict:(NSDictionary *)inputDict
 
@@ -204,36 +203,27 @@
         NSLog(@"Size of real and imaginary data arrays don't match.");
     }
     
-    [self.tapsLock lock];
-    
     // Modify the buffer (if necessary)
-    // Create the buffer if one doesn't already exist
-    size_t newBufferSize = [self.taps length];
-    if (self.realBuffer == nil) {
-        self.realBuffer = [[NSMutableData alloc] initWithLength:newBufferSize];
-        self.imagBuffer = [[NSMutableData alloc] initWithLength:newBufferSize];
-#warning bufferSize not used/set!
-    } else if (newBufferSize > self.bufferSize) {
-        // Only change the buffer if the number of taps increases
-        // We want to increase the size of the buffer, but it's
-        // important to ensure that the contents are maintained.
-        // The additional data (zeros) should go at the head
+    // get self.taps to local variable in order to avoid a lock (accessor is atomic)
+    NSData *taps = self.taps;
+    NSUInteger newBufferSize = [taps length];
+    if (newBufferSize > [self.realBuffer length]) {
+        // Only change the buffer if the number of taps increases. We want to increase the size of the buffer, but it's
+        // important to ensure that the contents are maintained. The additional data (zeros) should go at the head
+        NSUInteger growth = newBufferSize - [self.realBuffer length];
+        NSData *oldData = self.realBuffer;
+        self.realBuffer = [NSMutableData dataWithLength:growth];
+        [self.realBuffer appendData:oldData];
         
-        // Create the new array
-        NSMutableData *tempData = [[NSMutableData alloc] initWithLength:newBufferSize];
+        oldData = self.imagBuffer;
+        self.imagBuffer = [NSMutableData dataWithLength:growth];
+        [self.imagBuffer appendData:oldData];
         
-        // Copy the contents of the old array to the end of the new one
-        NSRange range = NSMakeRange(newBufferSize - [self.realBuffer length], newBufferSize);
-        [tempData replaceBytesInRange:range withBytes:[self.realBuffer bytes]];
-        self.realBuffer = tempData;
-        
-        tempData = [[NSMutableData alloc] initWithLength:newBufferSize];
-        [tempData replaceBytesInRange:range withBytes:[self.imagBuffer bytes]];
-        self.imagBuffer = tempData;
+        self.bufferSize = newBufferSize;
     }
     
     int count    = (int)[realIn length]   / sizeof(float);
-    int numTaps  = (int)[self.taps length]   / sizeof(float);
+    int numTaps  = (int)[taps length]   / sizeof(float);
     int capacity = (count + numTaps) * sizeof(float);
     
     NSMutableData *realData = [[NSMutableData alloc] initWithLength:sizeof(float) * count];
@@ -263,12 +253,10 @@
     memcpy(&imag[numTaps], [imagIn bytes], [imagIn length]);
     
     // Real and imaginary FIR filtering
-    const float *tapsData = [self.taps bytes];
+    const float *tapsData = [taps bytes];
     vDSP_conv(real, 1, tapsData, 1, result.realp, 1, count, numTaps);
     vDSP_conv(imag, 1, tapsData, 1, result.imagp, 1, count, numTaps);
-    
-    [self.tapsLock unlock];
-    
+
     // Refresh the contents of the buffer
     // We need to keep the same number of samples as the number of taps
     memcpy([self.realBuffer mutableBytes], &real[count], numTaps * sizeof(float));
@@ -283,6 +271,11 @@
 
 @end
 
+// private declarations
+@interface CSDRlowPassFloat ()
+@property (readwrite) NSMutableData *buffer;
+@end
+
 @implementation CSDRlowPassFloat
 
 - (NSData *)filterData:(NSData *)inputData
@@ -295,32 +288,20 @@
         NSLog(@"Input data was nil");
         return nil;
     }
-    
-    [self.tapsLock lock];
-    
+
     // Modify the buffer (if necessary)
-    // Create the buffer if one doesn't already exist
-    size_t newBufferSize = [self.taps length];
-    if (self.buffer == nil) {
-        self.buffer = [[NSMutableData alloc] initWithLength:newBufferSize];
-#warning bufferSize not used/set!
-    } else if (newBufferSize > self.bufferSize) {
-        // Only change the buffer if the number of taps increases
-        // We want to increase the size of the buffer, but it's
-        // important to ensure that the contents are maintained.
-        // The additional data (zeros) should go at the head
-        
-        // Create the new array
-        NSMutableData *tempData = [[NSMutableData alloc] initWithLength:newBufferSize];
-        
-        // Copy the contents of the old array to the end of the new one
-        NSRange range = NSMakeRange(newBufferSize - [self.buffer length], newBufferSize);
-        [tempData replaceBytesInRange:range withBytes:[self.buffer bytes]];
-        self.buffer = tempData;
+    NSData *taps = self.taps;
+    NSUInteger newBufferSize = [taps length];
+    if (newBufferSize > [self.buffer length]) {
+        // Only change the buffer if the number of taps increases. We want to increase the size of the buffer, but it's
+        // important to ensure that the contents are maintained. The additional data (zeros) should go at the head
+        NSData *oldData = self.buffer;
+        self.buffer = [NSMutableData dataWithLength:newBufferSize - [oldData length]];
+        [self.buffer appendData:oldData];
     }
     
     int count    = (int)[inputData length] / sizeof(float);
-    int numTaps  = (int)[self.taps      length] / sizeof(float);
+    int numTaps  = (int)[taps length] / sizeof(float);
     int capacity = (count + numTaps)  * sizeof(float);
     
     NSMutableData *outputData = [[NSMutableData alloc] initWithLength:sizeof(float) * count];
@@ -342,11 +323,9 @@
     memcpy(&temp[numTaps], [inputData bytes], [inputData length]);
     
     // FIR filtering
-    const float *tapsData = [self.taps bytes];
+    const float *tapsData = [taps bytes];
     vDSP_conv(temp, 1, tapsData, 1, outFloats, 1, count, numTaps);
-    
-    [self.tapsLock unlock];
-    
+
     // Refresh the contents of the buffer
     // We need to keep the same number of samples as the number of taps
     memcpy([self.buffer mutableBytes], &temp[count], numTaps * sizeof(float));
