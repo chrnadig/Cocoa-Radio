@@ -6,16 +6,12 @@
 //  Copyright (c) 2012. All rights reserved. Licensed under the GPL v.2
 //
 
-#ifndef Cocoa_Radio_downconvert_h
-#define Cocoa_Radio_downconvert_h
-
 #import <Cocoa/Cocoa.h>
-
 #import "CSDRFilter.h"
 #import "CSDRResampler.h"
 #import "CSDRDemod.h"
 
-@class AudioSink;
+@class AudioSink, CSDRComplexArray;
 
 // data structure for DSP context
 struct dsp_context {
@@ -24,7 +20,7 @@ struct dsp_context {
 
 double subtractTimes( uint64_t endTime, uint64_t startTime );
 
-NSDictionary *freqXlate(NSDictionary *inputDict, float localOscillator, int sampleRate);
+NSDictionary *freqXlate(CSDRComplexArray *inputData, float localOscillator, int sampleRate);
 NSData *quadratureDemod(NSDictionary *inputDict, float gain, float offset);
 NSDictionary *createComplexTone(int samples, float sampleRate, float frequency, float *lastPhase);
 
@@ -33,5 +29,3 @@ void removeDC(NSMutableData *data, double *average, double alpha);
 
 // Calculate power level from the given signal (log 10)
 void getPower(NSDictionary *input, NSMutableData *output, struct dsp_context *context, double alpha);
-
-#endif

@@ -6,12 +6,11 @@
 //  Copyright (c) 2012. All rights reserved. Licensed under the GPL v.2
 //
 
-#include <stdio.h>
 #import <Foundation/Foundation.h>
 #import <Accelerate/Accelerate.h>
 #import <mach/mach_time.h>
-
-#include "dspRoutines.h"
+#import "CSDRComplexArray.h"
+#import "dspRoutines.h"
 
 #define ACCELERATE_XLATE
 #define ACCELERATE_DEMOD
@@ -87,30 +86,13 @@ createComplexTone(int samples, float sampleRate, float frequency, float *lastPha
 // The effect of this is that the desired frequency is moved to 0 Hz.
 // Then, the band is low-pass filtered to eliminate unwanted signals
 // No decimation is performed at this point.
-NSDictionary *
-freqXlate(NSDictionary *inputDict, float localOscillator, int sampleRate)
+#warning return CSDRComplexArray
+NSDictionary *freqXlate(CSDRComplexArray *inputData, float localOscillator, int sampleRate)
 {
     static float lastPhase = 0.;
     float delta_phase = localOscillator / sampleRate;
+    int count = (int)inputData.length;
 
-    NSData *realIn = inputDict[@"real"];
-    NSData *imagIn = inputDict[@"imag"];
-    
-    if (realIn == nil || imagIn == nil) {
-        NSLog(@"One or more input to freq xlate was nil");
-        return nil;
-    }
-    
-    if ([realIn length] != [imagIn length]) {
-        NSLog(@"Size of real and imaginary data arrays don't match.");
-    }
-    
-    int count = (int)[realIn length] / sizeof(float);
-
-    DSPSplitComplex input;
-    input.realp = (float *)[inputDict[@"real"] bytes];
-    input.imagp = (float *)[inputDict[@"imag"] bytes];
-    
     NSMutableData *realData = [[NSMutableData alloc] initWithLength:sizeof(float) * count];
     NSMutableData *imagData = [[NSMutableData alloc] initWithLength:sizeof(float) * count];
     DSPSplitComplex result;
@@ -138,7 +120,7 @@ freqXlate(NSDictionary *inputDict, float localOscillator, int sampleRate)
     free(phase);
     
     // Vectorized complex multiplication
-    vDSP_zvmul(&input, 1, &coeff, 1, &result, 1, count, 1);
+    vDSP_zvmul(inputData.complexp, 1, &coeff, 1, &result, 1, count, 1);
     free(coeff.realp);
     free(coeff.imagp);
     

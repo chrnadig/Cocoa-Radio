@@ -8,6 +8,7 @@
 
 #import "dspRoutines.h"
 #import "dspprobes.h"
+#import "CSDRComplexArray.h"
 #import "CSDRDemodAM.h"
 #import "CSDRDemodWBFM.h"
 #import "CSDRDemodNBFM.h"
@@ -62,7 +63,7 @@
 }
 
 // demodulate sampled data
-- (NSData *)demodulateData:(NSDictionary *)complexInput
+- (NSData *)demodulateData:(CSDRComplexArray *)complexInput
 {
     [[NSException exceptionWithName:@"CSDRDemodException" reason:@"Demodulating in the base class!" userInfo:nil] raise];
     return nil;

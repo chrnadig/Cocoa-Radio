@@ -9,7 +9,14 @@
 #import <Accelerate/Accelerate.h>
 #import "CSDRFFT.h"
 #import "CSDRRingBuffer.h"
+#import "CSDRRealArray.h"
+#import "CSDRComplexArray.h"
 #import "dspprobes.h"
+
+// private declarations
+@interface CSDRFFT ()
+@property (readwrite) CSDRComplexArray *buffer;
+@end
 
 @implementation CSDRFFT
 
@@ -24,12 +31,9 @@
             return nil;
         }
 
-        // Allocate buffers
-        _realBuffer = malloc(sizeof(double) * initSize);
-        _imagBuffer = malloc(sizeof(double) * initSize);
-        
-        // Magnitude data
-        _magBuffer = [[NSMutableData alloc] initWithLength:sizeof(float) * initSize];
+        // allocate buffers
+        _buffer = [CSDRComplexArray arraywithLength:initSize];
+        _magBuffer = [CSDRRealArray arrayWithLength:initSize];
         
         // Processing synchronization and thread
         _lock = [[NSCondition alloc] init];
@@ -50,38 +54,28 @@
 - (void)dealloc
 {
     [_fftThread cancel];
-    free(_realBuffer);
-    free(_imagBuffer);
 }
 
-// This function retreives the current FFT data
-// It finalizes the number of FFT operations and divides out the average
+// this method retrieves the current FFT data, it finalizes the number of FFT operations and divides out the average
 - (void)updateMagnitudeData
 {
-    float *magValues = [self.magBuffer mutableBytes];
+    if (self.counter > 0) {
+        static const float B = 1.0;
+        static const float C = 10.0;
+        float fcounter = self.counter;
+        vDSP_vsdiv(self.buffer.realp, 1, &fcounter, self.buffer.realp, 1, self.size);
+        vDSP_vsdiv(self.buffer.imagp, 1, &fcounter, self.buffer.imagp, 1, self.size);
+        vDSP_zvabs(self.buffer.complexp, 1, self.magBuffer.realp, 1, self.size);
+        vDSP_vdbcon(self.magBuffer.realp, 1, &B, self.magBuffer.realp, 1, self.size, 0);
+        vDSP_vsdiv(self.magBuffer.realp, 1, &C, self.magBuffer.realp, 1, self.size);
 
-    if (self.counter == 0) {
-        return;
+        if (COCOARADIO_FFTCOUNTER_ENABLED()) {
+            COCOARADIO_FFTCOUNTER((int)self.counter);
+        }
+
+        self.counter = 0;
+        [self.buffer clear];
     }
-    
-    for (int i = 0; i < self.size; i++) {
-        // Compute the average
-        double real = self.realBuffer[i] / self.counter;
-        double imag = self.imagBuffer[i] / self.counter;
-        
-        // Compute the magnitude and put it in the mag array
-        magValues[i] = sqrt((real * real) + (imag * imag));
-        magValues[i] = log10(magValues[i]);
-    }
-
-    if (COCOARADIO_FFTCOUNTER_ENABLED()) {
-        COCOARADIO_FFTCOUNTER((int)self.counter);
-    }
-
-    self.counter = 0;
-
-    bzero(self.realBuffer, self.size * sizeof(double));
-    bzero(self.imagBuffer, self.size * sizeof(double));
 }
 
 - (void)fftLoop
@@ -97,8 +91,8 @@
             @autoreleasepool {
                 // Get some data from the ring buffer
                 [self.lock lock];
-#warning this should be a while loop!
-                if (self.realRingBuffer.fillLevel < 2048 || self.imagRingBuffer.fillLevel < 2048) {
+                while (self.realRingBuffer.fillLevel < 2048 || self.imagRingBuffer.fillLevel < 2048) {
+#warning is this right?
                     [self updateMagnitudeData];
                     [self.lock wait];
                 }
@@ -125,12 +119,13 @@
     }
 }
 
-- (void)addSamplesReal:(NSData *)real imag:(NSData *)imag
+- (void)addSamples:(CSDRComplexArray *)samples
 {
     [self.lock lock];
     
-    [self.realRingBuffer storeData:real];
-    [self.imagRingBuffer storeData:imag];
+#warning temporary, will be replaced by an implementation of a complex ring buffer!
+    [self.realRingBuffer storeData:[NSData dataWithBytesNoCopy:samples.realp length:samples.length * sizeof(float) freeWhenDone:NO]];
+    [self.imagRingBuffer storeData:[NSData dataWithBytesNoCopy:samples.imagp length:samples.length * sizeof(float) freeWhenDone:NO]];
     
     [self.lock signal];
     [self.lock unlock];
@@ -185,22 +180,18 @@
     vDSP_fft_zop(setup, &input, 1, &output, 1, self.log2n, FFT_FORWARD );
 }
 
-- (void)convertFFTandAccumulateReal:(NSMutableData *)real
-                               imag:(NSMutableData *)imag
+#warning replace with vDSP_zvadd()
+- (void)convertFFTandAccumulateReal:(NSMutableData *)real imag:(NSMutableData *)imag
 {
     float *realData = [real mutableBytes];
     float *imagData = [imag mutableBytes];
-    
-    // Accumulate this data with what came before it, and re-order the values
-    for (NSInteger i = 0; i <= self.size / 2; i++) {
-        self.realBuffer[i] += realData[i + self.size / 2];
-        self.imagBuffer[i] += imagData[i + self.size / 2];
-    }
-    
-    for (NSInteger i = 0; i <  self.size / 2; i++) {
-        self.realBuffer[i + self.size / 2] += realData[i];
-        self.imagBuffer[i + self.size / 2] += imagData[i];
-    }
+
+    // accumulate this data with what came before it, and re-order the values
+    NSUInteger halfSize = self.size / 2;
+    vDSP_vadd(self.buffer.realp, 1, realData + halfSize, 1, self.buffer.realp, 1, halfSize);
+    vDSP_vadd(self.buffer.imagp, 1, imagData + halfSize, 1, self.buffer.imagp, 1, halfSize);
+    vDSP_vadd(self.buffer.realp + halfSize, 1, realData, 1, self.buffer.realp + halfSize, 1, halfSize);
+    vDSP_vadd(self.buffer.imagp + halfSize, 1, imagData, 1, self.buffer.imagp + halfSize, 1, halfSize);
 }
 
 @end

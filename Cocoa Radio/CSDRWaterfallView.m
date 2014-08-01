@@ -9,6 +9,7 @@
 #import "CSDRWaterfallView.h"
 #import "OpenGLView.h"
 #import "CSDRAppDelegate.h"
+#import "CSDRRealArray.h"
 
 #define WIDTH  2048
 #define HEIGHT 4096
@@ -198,15 +199,15 @@ rainbow(float pixel[4], float value)
 
     glBindTexture( GL_TEXTURE_2D, textureID );
 
-    NSData *newSlice = [[self appDelegate] fftData];
-    if (newSlice) {
+    CSDRRealArray *newSlice = [[self appDelegate] fftData];
+    if (newSlice != nil) {
         if (currentLine == HEIGHT) {
             currentLine = 0;
         } else {
             currentLine++;
         }
         
-        const float *rawBuffer = [newSlice bytes];
+        const float *rawBuffer = newSlice.realp;
         float *pixels = malloc(sizeof(float) * WIDTH * 4);
         
         float bottomValue = [[self appDelegate] bottomValue];

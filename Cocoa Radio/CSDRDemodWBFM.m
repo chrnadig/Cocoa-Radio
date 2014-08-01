@@ -7,6 +7,7 @@
 //
 
 #import "CSDRDemodWBFM.h"
+#import "CSDRComplexArray.h"
 #import "dspRoutines.h"
 #import "dspprobes.h"
 
@@ -36,10 +37,10 @@
     return [self initWithRFRate:2048000 AFRate:48000];
 }
 
-- (NSData *)demodulateData:(NSDictionary *)complexInput
+- (NSData *)demodulateData:(CSDRComplexArray *)complexInput
 {
     // Make sure that the temporary arrays are big enough
-    int samples = (int)[complexInput[@"real"] length] / sizeof(float);
+    NSUInteger samples = complexInput.length;
     if ([self.radioPower length] < (samples * sizeof(float))) {
         [self.radioPower setLength:samples * sizeof(float)];
     }

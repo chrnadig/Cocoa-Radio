@@ -8,9 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
-@class CSDRlowPassComplex;
-@class CSDRlowPassFloat;
-@class CSDRResampler;
+@class CSDRlowPassComplex, CSDRlowPassFloat, CSDRResampler, CSDRComplexArray;
 
 @interface CSDRDemod : NSObject
 
@@ -43,6 +41,6 @@
 - (id)initWithRFRate:(float)rfRate AFRate:(float)afRate;
 
 // demodulate sampled data
-- (NSData *)demodulateData:(NSDictionary *)complexInput;
+- (NSData *)demodulateData:(CSDRComplexArray *)complexInput;
 
 @end

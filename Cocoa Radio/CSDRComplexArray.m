@@ -1,0 +1,76 @@
+//
+//  CSDRComplexArray.m
+//  Cocoa Radio
+//
+//  Created by Christoph Nadig on 31.07.14.
+//  Copyright (c) 2014 Lobotomo Software. All rights reserved.
+//
+
+#import "CSDRComplexArray.h"
+
+// private declaration
+@interface CSDRComplexArray ()
+@property (readwrite) DSPSplitComplex complex;
+@end
+
+@implementation CSDRComplexArray
+
+// convenience constructor
++ (instancetype)arraywithLength:(NSUInteger)length
+{
+    return [[self alloc] initWithLength:length];
+}
+
+// initializer
+- (instancetype)initWithLength:(NSUInteger)length
+{
+    if (self = [super init]) {
+        _complex.realp = calloc(length * 2, sizeof(float));
+        if (_complex.realp != NULL) {
+            _complex.imagp = _complex.realp + length;
+            _length = length;
+            return self;
+        }
+    }
+    // something went wrong
+    return nil;
+}
+
+- (void)dealloc
+{
+    free(_complex.realp);
+}
+
+// clear array (set all values to 0.0)
+- (void)clear
+{
+    memset(self.realp, 0, 2 * self.length * sizeof(float));
+}
+
+// accessors
+- (float *)realp
+{
+    return _complex.realp;
+}
+
+- (float *)imagp
+{
+    return _complex.imagp;
+}
+
+- (DSPSplitComplex *)complexp
+{
+    return &_complex;
+}
+
+- (NSString *)description
+{
+    NSMutableString *string = [NSMutableString stringWithFormat:@"%@(%lu) = {", NSStringFromClass([self class]), self.length];
+    for (NSUInteger i = 0; i < self.length; i++) {
+        [string appendFormat:@" %f+%fi", self.realp[i], self.imagp[i]];
+    }
+    [string appendString:@" }"];
+    return string;
+}
+
+@end

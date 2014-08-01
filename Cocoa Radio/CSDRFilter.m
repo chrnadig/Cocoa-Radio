@@ -6,10 +6,9 @@
 //  Copyright (c) 2012 Oregon State University (COAS). All rights reserved.
 //
 
-#import "CSDRFilter.h"
 #import <Accelerate/Accelerate.h>
-#import <mach/mach_time.h>
-#include "dspRoutines.h"
+#import "CSDRFilter.h"
+#import "dspRoutines.h"
 
 #define ACCELERATE
 

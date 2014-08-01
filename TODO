@@ -5,7 +5,9 @@ General:
 - replace alloc/init with new
 - revisit NSConditions/NSLocks - eliminate when not needed
 - remove all @synthesize occurrences
-
+- merge multiple @class lines into one
+- unify parameter names to see a flow of data through methods (look for data, complexRaw, complexInput etc.)
+- move all private properties to .m file
 
 CSDRRingBuffer:
 - replace NSMutableData with float *malloc()
@@ -30,4 +32,7 @@ CSDRDemod (and subclasses):
 - move common demodulation code to base class!
 
 CSDRAudioDevice:
-- split into two files (there are two classes now)
+- split into two files (there are two classes)
+
+CSDRAppDelegate:
+- move all radio related code to CSDRRadio class and only leave GUI related stuff in CSDRAppDelegate

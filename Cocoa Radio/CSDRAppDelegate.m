@@ -8,16 +8,14 @@
 
 #define CSDRAPPDELEGATE_M
 #import "CSDRAppDelegate.h"
+#warning required?
 #undef  CSDRAPPDELEGATE_M
-
-#import <mach/mach_time.h>
-
+#import "CSDRComplexArray.h"
 #import "CSDRAudioDevice.h"
 #import "CSDRRingBuffer.h"
 #import "CSDRSpectrumView.h"
 #import "CSDRWaterfallView.h"
 #import "CSDRFFT.h"
-
 #import "dspRoutines.h"
 #import "dspprobes.h"
 
@@ -39,7 +37,7 @@
     
     do {
         @autoreleasepool {
-            NSDictionary *complexRaw = nil;
+            CSDRComplexArray *complexRaw = nil;
             NSArray *blockArray = nil;
            
             // Attempt to get a block to process
@@ -62,10 +60,12 @@
                 // Otherwise, there's exactly one.
                 } else {
                     complexRaw = [demodFIFO objectAtIndex:0];
+#warning introduce FIFO class?
                     [demodFIFO removeObjectAtIndex:0];
                 }
             [demodCondition unlock];
             
+#warning not sure what blockarray is for?
             if (blockArray) {
                 [demodulatorLock lock];
                     for (NSDictionary *raw in blockArray) {
@@ -110,31 +110,25 @@
         int blocksize = (int)[inputData length] / 2;
         
         // We need them to be floats (Real [Inphase] and Imaqinary [Quadrature])
-        NSMutableData *realData = [[NSMutableData alloc] initWithLength:sizeof(float) * blocksize];
-        NSMutableData *imagData = [[NSMutableData alloc] initWithLength:sizeof(float) * blocksize];
-        
-        // All the vDSP routines (from the Accelerate framework)
-        // need the complex data represented in a COMPLEX_SPLIT structure
-        float *realp  = [realData mutableBytes];
-        float *imagp  = [imagData mutableBytes];
+        CSDRComplexArray *data = [CSDRComplexArray arraywithLength:blocksize];
+        float *realp  = data.realp;
+        float *imagp  = data.imagp;
         
         for (int i = 0; i < blocksize; i++) {
-            realp[i] = (float)(resultSamples[i*2 + 0] - 127) / 128;
-            imagp[i] = (float)(resultSamples[i*2 + 1] - 127) / 128;
+#warning have lookup table here?
+            realp[i] = (resultSamples[i*2 + 0] - 127.0) / 128.0;
+            imagp[i] = (resultSamples[i*2 + 1] - 127.0) / 128.0;
         }
 
         // Process the samples for visualization with the FFT
-        [fftProcessor addSamplesReal:realData imag:imagData];
-
-        // Perform all the demodulation on the demodulation thread
-        NSDictionary *complexRaw = @{ @"real" : realData, @"imag" : imagData };
+        [fftProcessor addSamples:data];
 
         [demodCondition lock];
         int count = (int)[demodFIFO count];
         if (count > 100) {
             NSLog(@"WARNING: Demodulation isn't keeping up!");
         } else {
-            [demodFIFO addObject:complexRaw];
+            [demodFIFO addObject:data];
         }
         [demodCondition signal];
         [demodCondition unlock];
@@ -268,8 +262,8 @@
     fftProcessor = [[CSDRFFT alloc] initWithSize:FFT_SIZE];
 
 // Setup the demodulation thread
-    demodFIFO = [[NSMutableArray alloc] initWithCapacity:1];
-    demodCondition = [[NSCondition alloc] init];
+    demodFIFO = [NSMutableArray new];
+    demodCondition = [NSCondition new];
     demodThread = [[NSThread alloc] initWithTarget:self selector:@selector(demodLoop) object:nil];
     
 // Create a new demodulator
@@ -482,7 +476,7 @@
     [audioOutput discontinuity];
 }
 
-- (NSData *)fftData
+- (CSDRRealArray *)fftData
 {
     return [fftProcessor magBuffer];
 }

@@ -41,9 +41,7 @@
 
 - (void)dealloc
 {
-    if (_space != NULL) {
-        free(_space);
-    }
+    free(_space);
 }
 
 - (void)clear
@@ -110,7 +108,8 @@
     // detect underrun
     if (self.rp > self.wp) {
         NSLog(@"Buffer underrun!");
-#warning should we set underrun floats to 0?
+        // zero out underrun values
+        memset(dst + self.fillLevel, 0, n - self.fillLevel);
         self.wp = self.rp;
     }
     // keep rp and wp in the range of 0 to 2 * size - 1
@@ -124,6 +123,7 @@
     [self.lock unlock];
 }
 
+#warning needed? or leave translations into audio buffers up to caller?
 - (void)fetchFrames:(NSUInteger)n into:(AudioBufferList *)ioData
 {
     // basic sanity checking

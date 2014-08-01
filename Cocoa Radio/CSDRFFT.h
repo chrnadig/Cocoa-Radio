@@ -8,16 +8,15 @@
 
 #import <Foundation/Foundation.h>
 
-@class CSDRRingBuffer;
+@class CSDRRingBuffer, CSDRRealArray, CSDRComplexArray;
 
 @interface CSDRFFT : NSObject
 
-@property (readwrite) double *realBuffer;
-@property (readwrite) double *imagBuffer;
+#warning move them to .m file
 @property (readwrite) NSInteger counter;
 @property (readwrite) NSInteger size;
 @property (readwrite) NSInteger log2n;
-@property (readwrite) NSMutableData *magBuffer;
+@property (readwrite) CSDRRealArray *magBuffer;
 @property (readwrite) NSCondition *lock;
 @property (readwrite) NSThread *fftThread;
 @property (readwrite) CSDRRingBuffer *realRingBuffer;
@@ -25,7 +24,7 @@
 
 
 - (id)initWithSize:(int)size;
-- (void)addSamplesReal:(NSData *)real imag:(NSData *)imag;
+- (void)addSamples:(CSDRComplexArray *)samples;
 - (void)updateMagnitudeData;
 
 @end

@@ -46,6 +46,8 @@
 		3CE31DB315F12E3800F0123B /* CSDRRingBuffer.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CE31DB215F12E3800F0123B /* CSDRRingBuffer.m */; };
 		3CE31DB515F130E500F0123B /* audioprobes.d in Sources */ = {isa = PBXBuildFile; fileRef = 3CE31DB415F130E500F0123B /* audioprobes.d */; };
 		65CE669919825466002C05D4 /* rtl-sdr.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65CE669819825466002C05D4 /* rtl-sdr.framework */; };
+		65D255FB198AC4C300C4AF49 /* CSDRComplexArray.m in Sources */ = {isa = PBXBuildFile; fileRef = 65D255F8198AC4C300C4AF49 /* CSDRComplexArray.m */; };
+		65D255FC198AC4C300C4AF49 /* CSDRRealArray.m in Sources */ = {isa = PBXBuildFile; fileRef = 65D255FA198AC4C300C4AF49 /* CSDRRealArray.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -147,6 +149,10 @@
 		3CE31DB215F12E3800F0123B /* CSDRRingBuffer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CSDRRingBuffer.m; sourceTree = "<group>"; };
 		3CE31DB415F130E500F0123B /* audioprobes.d */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.dtrace; path = audioprobes.d; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.c; };
 		65CE669819825466002C05D4 /* rtl-sdr.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = "rtl-sdr.framework"; path = "../Softshell/rtl-sdr/build/Debug/rtl-sdr.framework"; sourceTree = "<group>"; };
+		65D255F7198AC4C300C4AF49 /* CSDRComplexArray.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CSDRComplexArray.h; sourceTree = "<group>"; };
+		65D255F8198AC4C300C4AF49 /* CSDRComplexArray.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CSDRComplexArray.m; sourceTree = "<group>"; };
+		65D255F9198AC4C300C4AF49 /* CSDRRealArray.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CSDRRealArray.h; sourceTree = "<group>"; };
+		65D255FA198AC4C300C4AF49 /* CSDRRealArray.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CSDRRealArray.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -223,6 +229,7 @@
 		3C27C4EE15813348001FD108 /* Cocoa Radio */ = {
 			isa = PBXGroup;
 			children = (
+				65D255F5198AC4A000C4AF49 /* Memory */,
 				3C7CAAEB15BDA01900E78D83 /* Audio */,
 				3C85B57415A632C400803A7B /* Network */,
 				3C68163E162DCAEC00ED8372 /* Demodulators */,
@@ -308,8 +315,6 @@
 			children = (
 				3CE31D6B15F013DB00F0123B /* CSDRAudioDevice.h */,
 				3CE31D6C15F013DB00F0123B /* CSDRAudioDevice.m */,
-				3CE31DB115F12E3800F0123B /* CSDRRingBuffer.h */,
-				3CE31DB215F12E3800F0123B /* CSDRRingBuffer.m */,
 				3CE31DB415F130E500F0123B /* audioprobes.d */,
 			);
 			name = Audio;
@@ -324,6 +329,19 @@
 				3C85B57D15A649E300803A7B /* NetworkSession.m */,
 			);
 			name = Network;
+			sourceTree = "<group>";
+		};
+		65D255F5198AC4A000C4AF49 /* Memory */ = {
+			isa = PBXGroup;
+			children = (
+				65D255F7198AC4C300C4AF49 /* CSDRComplexArray.h */,
+				65D255F8198AC4C300C4AF49 /* CSDRComplexArray.m */,
+				65D255F9198AC4C300C4AF49 /* CSDRRealArray.h */,
+				65D255FA198AC4C300C4AF49 /* CSDRRealArray.m */,
+				3CE31DB115F12E3800F0123B /* CSDRRingBuffer.h */,
+				3CE31DB215F12E3800F0123B /* CSDRRingBuffer.m */,
+			);
+			name = Memory;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -411,6 +429,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				65D255FC198AC4C300C4AF49 /* CSDRRealArray.m in Sources */,
 				3C27C4F515813348001FD108 /* main.m in Sources */,
 				3C27C4FC15813348001FD108 /* CSDRAppDelegate.m in Sources */,
 				3C27C51915816B26001FD108 /* OpenGLController.m in Sources */,
@@ -431,6 +450,7 @@
 				3CE31DB515F130E500F0123B /* audioprobes.d in Sources */,
 				3CADF1C4162C825E00B9FECC /* CSDRDemodAM.m in Sources */,
 				3C68163A162DCA2400ED8372 /* CSDRDemodWBFM.m in Sources */,
+				65D255FB198AC4C300C4AF49 /* CSDRComplexArray.m in Sources */,
 				3C68163D162DCA7A00ED8372 /* CSDRDemodNBFM.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -9,12 +9,7 @@
 #import <Cocoa/Cocoa.h>
 
 // Forward declaration of classes
-@class CSDRSpectrumView;
-@class CSDRWaterfallView;
-@class CSDRDemod;
-@class CSDRFFT;
-@class CSDRAudioOutput;
-@class CSDRRingBuffer;
+@class CSDRSpectrumView, CSDRWaterfallView, CSDRDemod, CSDRFFT, CSDRAudioOutput, CSDRRealArray, CSDRRingBuffer;
 
 #import <rtl-sdr/RTLSDRDevice.h>
 
@@ -78,6 +73,6 @@
 @property (readwrite) float tuningValue;
 @property (readwrite) float loValue;
 
-@property (readonly)  NSData *fftData;
+@property (readonly)  CSDRRealArray *fftData;
 
 @end
