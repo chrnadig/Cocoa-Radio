@@ -13,11 +13,11 @@
 #define ACCELERATE
 
 // private declarations
-@interface CSDRfilter ()
+@interface CSDRFilter ()
 @property (readwrite) NSData *taps;
 @end
 
-@implementation CSDRfilter
+@implementation CSDRFilter
 
 - (id)init
 {
@@ -166,13 +166,13 @@
 
 
 // private declarations
-@interface CSDRlowPassComplex ()
+@interface CSDRComplexLowPassFilter ()
 @property (readwrite) NSInteger bufferSize;
 @property (readwrite) NSMutableData *realBuffer;
 @property (readwrite) NSMutableData *imagBuffer;
 @end
 
-@implementation CSDRlowPassComplex
+@implementation CSDRComplexLowPassFilter
 
 - (instancetype)init
 {
@@ -271,11 +271,11 @@
 @end
 
 // private declarations
-@interface CSDRlowPassFloat ()
+@interface CSDRRealLowPassFilter ()
 @property (readwrite) NSMutableData *buffer;
 @end
 
-@implementation CSDRlowPassFloat
+@implementation CSDRRealLowPassFilter
 
 - (NSData *)filterData:(NSData *)inputData
 {

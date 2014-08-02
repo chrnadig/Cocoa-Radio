@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
-@interface CSDRfilter : NSObject
+@interface CSDRFilter : NSObject
 
 @property (readwrite, nonatomic) float bandwidth;
 @property (readwrite, nonatomic) float skirtWidth;
@@ -17,13 +17,13 @@
 
 @end
 
-@interface CSDRlowPassComplex : CSDRfilter
+@interface CSDRComplexLowPassFilter : CSDRFilter
 
 - (NSDictionary *)filterDict:(NSDictionary *)input;
 
 @end
 
-@interface CSDRlowPassFloat : CSDRfilter
+@interface CSDRRealLowPassFilter : CSDRFilter
 
 - (NSData *)filterData:(NSData *)input;
 

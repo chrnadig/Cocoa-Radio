@@ -9,7 +9,7 @@
 #import <Cocoa/Cocoa.h>
 
 // Forward declaration of classes
-@class CSDRSpectrumView, CSDRWaterfallView, CSDRDemod, CSDRFFT, CSDRAudioOutput, CSDRRealArray, CSDRRingBuffer;
+@class CSDRSpectrumView, CSDRWaterfallView, CSDRDemod, CSDRFFT, CSDRAudioOutput, CSDRRealArray, CSDRRealBuffer;
 
 #import <rtl-sdr/RTLSDRDevice.h>
 

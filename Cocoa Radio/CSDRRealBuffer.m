@@ -6,11 +6,11 @@
 //  Copyright (c) 2012. All rights reserved.
 //
 
-#import "CSDRRingBuffer.h"
+#import "CSDRRealBuffer.h"
 #include "audioprobes.h"
 
 // private declarations
-@interface CSDRRingBuffer ()
+@interface CSDRRealBuffer ()
 @property (readwrite) NSCondition *lock;
 @property (readwrite) float *space;
 @property (readwrite) NSUInteger rp;
@@ -18,14 +18,16 @@
 @property (readwrite) NSInteger fillLevel;
 @end
 
-@implementation CSDRRingBuffer
+@implementation CSDRRealBuffer
 
-- (id)init
+// convencience constructor
++ (instancetype)bufferWithCapacity:(NSUInteger)capacity
 {
-    return [self initWithCapacity:1024 * 1024];
+    return [[self alloc] initWithCapacity:capacity];
 }
 
-- (id)initWithCapacity:(NSInteger)capacity
+// initializer
+- (instancetype)initWithCapacity:(NSUInteger)capacity
 {
     if (self = [super init]) {
         _lock = [NSCondition new];
@@ -51,6 +53,7 @@
     [self.lock unlock];
 }
 
+// store data in the ring buffer
 - (void)storeData:(NSData *)newData
 {
     float *src = (float *)[newData bytes];
@@ -108,8 +111,6 @@
     // detect underrun
     if (self.rp > self.wp) {
         NSLog(@"Buffer underrun!");
-        // zero out underrun values
-        memset(dst + self.fillLevel, 0, n - self.fillLevel);
         self.wp = self.rp;
     }
     // keep rp and wp in the range of 0 to 2 * size - 1

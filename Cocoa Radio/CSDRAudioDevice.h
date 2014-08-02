@@ -11,7 +11,7 @@
 #import <CoreAudio/AudioHardware.h>
 #import <AudioUnit/AudioUnit.h>
 
-@class CSDRRingBuffer;
+@class CSDRRealBuffer;
 
 @interface CSDRAudioDevice : NSObject
 
@@ -25,7 +25,7 @@
 
 - (id)initWithRate:(float)sampleRate;
 
-- (CSDRRingBuffer *)ringBuffer;
+- (CSDRRealBuffer *)ringBuffer;
 
 - (BOOL)prepare;
 - (void)unprepare;

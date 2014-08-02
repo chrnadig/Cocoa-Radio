@@ -7,6 +7,7 @@
 //
 
 #import "CSDRResampler.h"
+#include <Accelerate/Accelerate.h>
 
 @implementation CSDRResampler
 
@@ -60,7 +61,7 @@
         NSLog(@"At least one byte array passed into resampler was nil!");
         return;
     }
-    
+
     // Perform the main loop for the resampler
     for (int i = 0; i < outputSize; i++) {
         NSInteger virtualSampleIndex = i * self.decimator;

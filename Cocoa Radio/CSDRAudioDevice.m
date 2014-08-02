@@ -10,7 +10,7 @@
 #import <AudioToolbox/AudioUnitUtilities.h>
 #import <mach/mach_time.h>
 #import "CSDRAudioDevice.h"
-#import "CSDRRingBuffer.h"
+#import "CSDRRealBuffer.h"
 #import "CSDRAppDelegate.h"
 #import "audioprobes.h"
 
@@ -29,7 +29,7 @@ static NSString *audioSourceDeviceUIDKey            = @"audioSourceDeviceUID";
 @property (readwrite) BOOL running;
 @property (readwrite) BOOL prepared;
 @property (readwrite) AudioComponentInstance auHAL;
-@property (readwrite) CSDRRingBuffer *ringBuffer;
+@property (readwrite) CSDRRealBuffer *ringBuffer;
 @end
 
 @implementation CSDRAudioDevice
@@ -270,7 +270,7 @@ OSStatus OutputProc(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, c
     @autoreleasepool {
         
         CSDRAudioOutput *device = (__bridge CSDRAudioOutput *)inRefCon;
-        CSDRRingBuffer *ringBuffer = device.ringBuffer;
+        CSDRRealBuffer *ringBuffer = device.ringBuffer;
         static uint64_t last_buffer_time;
 
         // determine whether this will have a buffer underflow, if so, trigger a discontinuity.  Perhaps, it'll be less
@@ -384,7 +384,7 @@ OSStatus OutputProc(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, c
         AudioUnitGetProperty (self.auHAL, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &deviceFormat, &size);
         
         // create a ring buffer for the audio (1 second worth of data)
-        self.ringBuffer = [[CSDRRingBuffer alloc] initWithCapacity:self.sampleRate];
+        self.ringBuffer = [[CSDRRealBuffer alloc] initWithCapacity:self.sampleRate];
         
         // setup the callback
         AudioUnitSetProperty(self.auHAL, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &output, sizeof(output));

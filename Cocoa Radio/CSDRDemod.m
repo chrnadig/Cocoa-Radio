@@ -33,10 +33,10 @@
 {
     if (self = [super init]) {
         // Setup the intermediate frequency filter
-        _ifFilter = [CSDRlowPassComplex new];
+        _ifFilter = [CSDRComplexLowPassFilter new];
         _ifFilter.gain = 1.0;
         // Setup the audio frequency filter
-        _afFilter = [CSDRlowPassFloat new];
+        _afFilter = [CSDRRealLowPassFilter new];
         _afFilter.gain = 0.5;
         // Setup the audio frequency rational resampler
         _afResampler = [CSDRResampler new];

@@ -8,47 +8,53 @@
 
 #import <Accelerate/Accelerate.h>
 #import "CSDRFFT.h"
-#import "CSDRRingBuffer.h"
+#import "CSDRRealBuffer.h"
 #import "CSDRRealArray.h"
 #import "CSDRComplexArray.h"
+#import "CSDRComplexBuffer.h"
 #import "dspprobes.h"
 
 // private declarations
 @interface CSDRFFT ()
 @property (readwrite) CSDRComplexArray *buffer;
+@property (readwrite) FFTSetup fftSetup;
+@property (readwrite) NSCondition *lock;
+@property (readwrite) NSThread *fftThread;
+@property (readwrite) CSDRComplexBuffer *ringBuffer;
+@property (readwrite) NSInteger counter;
+@property (readwrite) NSInteger log2n;
 @end
 
 @implementation CSDRFFT
 
-- (id)initWithSize:(int)initSize
+// initializer - size must be a power of 2
+- (id)initWithSize:(NSUInteger)initSize
 {
     if (self = [super init]) {
         // Integer ivars
         _size = initSize;
         _log2n = log2(_size);
-        if (exp2(_log2n) != _size) {
-            NSLog(@"Non power of 2 input size provided!");
-            return nil;
+        if (exp2(_log2n) == _size) {
+            _fftSetup = vDSP_create_fftsetup(_log2n, FFT_RADIX2);
+            if (_fftSetup != NULL) {
+                // allocate buffers
+                _buffer = [CSDRComplexArray arraywithLength:initSize];
+                _magBuffer = [CSDRRealArray arrayWithLength:initSize];
+                _ringBuffer = [CSDRComplexBuffer bufferWithCapacity:initSize * 1024];
+                // processing synchronization
+                _lock = [NSCondition new];
+                [_lock setName:@"com.us.alternet.cocoaradio.condition"];
+                // worker thread
+                _fftThread = [[NSThread alloc] initWithTarget:self selector:@selector(fftLoop) object:nil];
+                [_fftThread setName:@"com.us.alternet.cocoaradio.fftthread"];
+                [_fftThread start];
+                // all good
+                return self;
+            }
         }
-
-        // allocate buffers
-        _buffer = [CSDRComplexArray arraywithLength:initSize];
-        _magBuffer = [CSDRRealArray arrayWithLength:initSize];
-        
-        // Processing synchronization and thread
-        _lock = [[NSCondition alloc] init];
-        [_lock setName:@"FFT Ring buffer condition"];
-
-        _fftThread = [[NSThread alloc] initWithTarget:self selector:@selector(fftLoop) object:nil];
-        [_fftThread setName:@"com.us.alternet.cocoaradio.fftthread"];
-        [_fftThread start];
-
-        // Ring buffers
-        _realRingBuffer = [[CSDRRingBuffer alloc] initWithCapacity:initSize * 1000];
-        _imagRingBuffer = [[CSDRRingBuffer alloc] initWithCapacity:initSize * 1000];
     }
-    
-    return self;
+    // something went wrong
+    return nil;
 }
 
 - (void)dealloc
@@ -81,36 +87,35 @@
 - (void)fftLoop
 {
     @autoreleasepool {
-        NSMutableData *inputRealData =  [[NSMutableData alloc] initWithLength:2048 * sizeof(float)];
-        NSMutableData *inputImagData =  [[NSMutableData alloc] initWithLength:2048 * sizeof(float)];
-        NSMutableData *outputRealData = [[NSMutableData alloc] initWithLength:2048 * sizeof(float)];
-        NSMutableData *outputImagData = [[NSMutableData alloc] initWithLength:2048 * sizeof(float)];
         
+        CSDRComplexArray *input = [CSDRComplexArray arraywithLength:self.size];
+        CSDRComplexArray *output = [CSDRComplexArray arraywithLength:self.size];
+        NSUInteger halfSize = self.size / 2;
+
         // loop until thread is cancelled
         while (![self.fftThread isCancelled]) {
+            
             @autoreleasepool {
                 // Get some data from the ring buffer
                 [self.lock lock];
-                while (self.realRingBuffer.fillLevel < 2048 || self.imagRingBuffer.fillLevel < 2048) {
+                while (self.ringBuffer.fillLevel < self.size) {
 #warning is this right?
                     [self updateMagnitudeData];
                     [self.lock wait];
                 }
                 
-                // Fill the imag and real arrays with data
-                [self.realRingBuffer fillData:inputRealData];
-                [self.imagRingBuffer fillData:inputImagData];
+                // fill local buffer with data
+                [self.ringBuffer fillData:input];
                 [self.lock unlock];
                 
                 // Perform the FFT
-                [self complexFFTinputReal:inputRealData
-                                inputImag:inputImagData
-                               outputReal:outputRealData
-                               outputImag:outputImagData];
+                vDSP_fft_zop(self.fftSetup, input.complexp, 1, output.complexp, 1, self.log2n, FFT_FORWARD);
                 
                 // Convert the FFT format and accumulate
-                [self convertFFTandAccumulateReal:outputRealData
-                                             imag:outputImagData];
+                vDSP_vadd(self.buffer.realp, 1, output.realp + halfSize, 1, self.buffer.realp, 1, halfSize);
+                vDSP_vadd(self.buffer.imagp, 1, output.imagp + halfSize, 1, self.buffer.imagp, 1, halfSize);
+                vDSP_vadd(self.buffer.realp + halfSize, 1, output.realp, 1, self.buffer.realp + halfSize, 1, halfSize);
+                vDSP_vadd(self.buffer.imagp + halfSize, 1, output.imagp, 1, self.buffer.imagp + halfSize, 1, halfSize);
                 
                 // Advance the accumulation counter
                 self.counter++;
@@ -119,79 +124,15 @@
     }
 }
 
+// add signal samples
 - (void)addSamples:(CSDRComplexArray *)samples
 {
     [self.lock lock];
-    
-#warning temporary, will be replaced by an implementation of a complex ring buffer!
-    [self.realRingBuffer storeData:[NSData dataWithBytesNoCopy:samples.realp length:samples.length * sizeof(float) freeWhenDone:NO]];
-    [self.imagRingBuffer storeData:[NSData dataWithBytesNoCopy:samples.imagp length:samples.length * sizeof(float) freeWhenDone:NO]];
-    
+    // store incoming data into ring buffer
+    [self.ringBuffer storeData:samples];
+    // notify reader thread about new data
     [self.lock signal];
     [self.lock unlock];
-}
-
-- (void)complexFFTinputReal:(NSData *)inReal
-                  inputImag:(NSData *)inImag
-                 outputReal:(NSMutableData *)outReal
-                 outputImag:(NSMutableData *)outImag
-{
-    // Setup the Accelerate framework FFT engine
-    static FFTSetup setup = NULL;
-    if (setup == NULL) {
-        // Setup the FFT system (accelerate framework)
-        setup = vDSP_create_fftsetup(self.log2n, FFT_RADIX2);
-        if (setup == NULL)
-        {
-            printf("\nFFT_Setup failed to allocate enough memory.\n");
-            exit(0);
-        }
-    }
-    
-    // Check that the inputs are the right size
-    NSInteger length = self.size * sizeof(float);
-    if ([inReal length]  != length ||
-        [inImag length]  != length ||
-        [outReal length] != length ||
-        [outImag length] != length) {
-        NSLog(@"At least one input to the FFT is the wrong size");
-        return;
-    }
-    
-    // There aren't (to my knowledge) any const versions of this class
-    // therefore, we have to cast with the knowledge that these arrays
-    // are really consts.
-    COMPLEX_SPLIT input;
-    input.realp  = (float *)[inReal bytes];
-    input.imagp  = (float *)[inImag bytes];
-    
-    COMPLEX_SPLIT output;
-    output.realp  = (float *)[outReal mutableBytes];
-    output.imagp  = (float *)[outImag mutableBytes];
-    
-    // Make sure that the arrays are accessible
-    if (output.realp == NULL || output.imagp == NULL ||
-        input.realp  == NULL || input.imagp  == NULL) {
-        NSLog(@"Unable to access memory in the FFT function");
-        return;
-    }
-    
-    // Perform the FFT
-    vDSP_fft_zop(setup, &input, 1, &output, 1, self.log2n, FFT_FORWARD );
-}
-
-#warning replace with vDSP_zvadd()
-- (void)convertFFTandAccumulateReal:(NSMutableData *)real imag:(NSMutableData *)imag
-{
-    float *realData = [real mutableBytes];
-    float *imagData = [imag mutableBytes];
-
-    // accumulate this data with what came before it, and re-order the values
-    NSUInteger halfSize = self.size / 2;
-    vDSP_vadd(self.buffer.realp, 1, realData + halfSize, 1, self.buffer.realp, 1, halfSize);
-    vDSP_vadd(self.buffer.imagp, 1, imagData + halfSize, 1, self.buffer.imagp, 1, halfSize);
-    vDSP_vadd(self.buffer.realp + halfSize, 1, realData, 1, self.buffer.realp + halfSize, 1, halfSize);
-    vDSP_vadd(self.buffer.imagp + halfSize, 1, imagData, 1, self.buffer.imagp + halfSize, 1, halfSize);
 }
 
 @end

@@ -10,8 +10,7 @@ General:
 - move all private properties to .m file
 
 CSDRRingBuffer:
-- replace NSMutableData with float *malloc()
-- maybe simpler implementation?
+- replace ring buffer design eventually with an array of incoming CSDR*Arrays, to save one copy operation
 
 CSDRFFT:
 - replace log2 calculation with loop instead of log2() function call

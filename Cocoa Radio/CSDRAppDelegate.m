@@ -12,7 +12,7 @@
 #undef  CSDRAPPDELEGATE_M
 #import "CSDRComplexArray.h"
 #import "CSDRAudioDevice.h"
-#import "CSDRRingBuffer.h"
+#import "CSDRRealBuffer.h"
 #import "CSDRSpectrumView.h"
 #import "CSDRWaterfallView.h"
 #import "CSDRFFT.h"
