@@ -48,11 +48,10 @@
     }
     
     // Down convert
-    NSDictionary *baseBand;
-    baseBand = freqXlate(complexInput, self.centerFreq, self.rfSampleRate);
+    CSDRComplexArray *baseBand = freqXlate(complexInput, self.centerFreq, self.rfSampleRate);
     
     // Low-pass filter
-    CSDRComplexArray *filtered = [self.ifFilter filter:[CSDRComplexArray arrayWithDict:baseBand]];
+    CSDRComplexArray *filtered = [self.ifFilter filter:baseBand];
     
     // Get an array of signal power levels for squelch
     getPower(filtered, self.radioPower, &_powerContext, .0001);
@@ -61,16 +60,13 @@
     float dGain = self.dmGain + (self.rfSampleRate / (2 * M_PI * self.ifFilter.bandwidth));
     CSDRRealArray *demodulated = quadratureDemod(filtered, dGain, 0.);
     
-    
     // Remove any residual DC in the signal
     removeDC(demodulated, &_average, .001);
 
     // Audio Frequency filter
     CSDRRealArray *audioFiltered = [self.afFilter filter:demodulated];
     
-    // Iterate through the audio and mute sections that are too low
-    // for now, just use a manual squelch threshold
-    
+    // Iterate through the audio and mute sections that are too low for now, just use a manual squelch threshold
     const float *powerSamples = self.radioPower.realp;
     float *audioSamples = audioFiltered.realp;
     double newAverage = 0;

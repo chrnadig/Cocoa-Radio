@@ -13,115 +13,40 @@
 #import "CSDRRealArray.h"
 #import "dspRoutines.h"
 
-#define ACCELERATE_XLATE
-#define ACCELERATE_DEMOD
 //#define ACCELERATE_POWER
-
-//Raw mach_absolute_times going in, difference in seconds out
-double subtractTimes( uint64_t endTime, uint64_t startTime )
-{
-	uint64_t difference = endTime - startTime;
-	static double conversion = 0.0;
-	
-	if( conversion == 0.0 )
-	{
-		mach_timebase_info_data_t info;
-		kern_return_t err = mach_timebase_info( &info );
-		
-		//Convert the timebase into seconds
-		if( err == 0  )
-			conversion = 1e-9 * (double) info.numer / (double) info.denom;
-	}
-	
-	return conversion * (double) difference;
-}
 
 // This function first "mixes" the input frequency with a local oscillator
 // The effect of this is that the desired frequency is moved to 0 Hz.
 // Then, the band is low-pass filtered to eliminate unwanted signals
 // No decimation is performed at this point.
-#warning return CSDRComplexArray
-NSDictionary *freqXlate(CSDRComplexArray *inputData, float localOscillator, int sampleRate)
+CSDRComplexArray *freqXlate(CSDRComplexArray *inputData, float localOscillator, int sampleRate)
 {
-    static float lastPhase = 0.;
+    static float lastPhase = 0.0;
     float delta_phase = localOscillator / sampleRate;
-    int count = (int)inputData.length;
-
-    NSMutableData *realData = [[NSMutableData alloc] initWithLength:sizeof(float) * count];
-    NSMutableData *imagData = [[NSMutableData alloc] initWithLength:sizeof(float) * count];
-    DSPSplitComplex result;
-    result.realp  = (float *)[realData mutableBytes];
-    result.imagp  = (float *)[imagData mutableBytes];
+    int length = (int)inputData.length;
+    CSDRComplexArray *result = [CSDRComplexArray arrayWithLength:length];
+    CSDRComplexArray *coeff = [CSDRComplexArray arrayWithLength:length];;
     
-    uint64_t startTime = mach_absolute_time();
-    
-#ifdef ACCELERATE_XLATE
-    // Create the phase and coeff. arrays
-    float *phase = malloc(count * sizeof(float));
-    for (int i = 0; i < count; i++) {
-        phase[i] = (delta_phase * (float)i) + lastPhase;
-        phase[i] = fmod(phase[i], 1.) * 2. * M_PI;
+    // caculate the coefficents array
+#warning maybe use lookup table?
+    float *phase = malloc(length * sizeof(float));
+    coeff = [CSDRComplexArray arrayWithLength:length];
+    if (phase != NULL) {
+        for (int i = 0; i < length; i++) {
+            phase[i] = delta_phase * i + lastPhase;
+            phase[i] = fmod(phase[i], 1.0) * 2.0 * M_PI;
+        }
+        // vectorized cosine and sines
+        vvsinf(coeff.realp, phase, &length);
+        vvcosf(coeff.imagp, phase, &length);
+        free(phase);;
     }
+    lastPhase = fmod(length * delta_phase + lastPhase, 1.0);
     
-    // Vectorized cosine and sines
-    DSPSplitComplex coeff;
-    coeff.realp = malloc(count * sizeof(float));
-    coeff.imagp = malloc(count * sizeof(float));
-    vvsinf(coeff.realp, phase, &count);
-    vvcosf(coeff.imagp, phase, &count);
-//    vvsinpif(coeff.realp, phase, &count);
-//    vvcospif(coeff.imagp, phase, &count);
-    free(phase);
-    
-    // Vectorized complex multiplication
-    vDSP_zvmul(inputData.complexp, 1, &coeff, 1, &result, 1, count, 1);
-    free(coeff.realp);
-    free(coeff.imagp);
-    
-#else
-    const float *inputReal = [inputDict[@"real"] bytes];
-    const float *inputImag = [inputDict[@"imag"] bytes];
-    
-    // Iterate through the array
-    for (int i = 0; i < count; i++) {
-        // Phase goes from 0 to 1.
-        float current_phase = (delta_phase * (float)i) + lastPhase;
-        current_phase = fmod(current_phase, 1.);
-        
-        // Get the local oscillator value for the sample
-        // Complex exponential of (2 * pi * j)
-        float LOreal = sinf(M_PI * 2 * current_phase);;
-        float LOimag = cosf(M_PI * 2 * current_phase);;
-        
-        const float RFreal = inputReal[i];
-        const float RFimag = inputImag[i];
-        
-        // Complex multiplication (downconversion)
-        float first = RFreal * LOreal; // First
-        float outer = RFreal * LOimag; // Outer
-        float inner = RFimag * LOreal; // Inner
-        float last  = RFimag * LOimag; // Last
-        
-        result.realp[i] = first - last;
-        result.imagp[i] = outer + inner;
-    }
-#endif
-    
-    uint64_t endTime = mach_absolute_time();
-    
-    float deltaTime = subtractTimes(endTime, startTime);
-    
-    static int counter = 0;
-    static float runningAverage = 0.;
-    
-    counter += 1;
-    runningAverage += deltaTime;
-    
-    lastPhase = fmod(count * delta_phase + lastPhase, 1.);
-
-    // Return the results
-    return @{ @"real" : realData,
-              @"imag" : imagData };
+    // vectorized complex multiplication
+#warning use coeff or inputData for result instead of new allocation!
+    vDSP_zvmul(inputData.complexp, 1, coeff.complexp, 1, result.complexp, 1, length, 1);
+    return result;
 }
 
 CSDRRealArray *quadratureDemod(CSDRComplexArray *input, float gain, float offset)
@@ -179,9 +104,10 @@ void removeDC(CSDRRealArray *input, double *average, double alpha)
 #else
     float m;
     vDSP_meanv(input.realp, 1, &m, input.length);
+    *average = m;
     m = -m;
     vDSP_vsadd(input.realp, 1, &m, input.realp, 1, input.length);
-    *average = -m;
+    NSLog(@"average = %f", *average);
 #endif
 }
 

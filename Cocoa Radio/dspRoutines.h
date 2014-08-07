@@ -14,14 +14,12 @@
 @class AudioSink, CSDRComplexArray;
 
 // data structure for DSP context
-#warning remove with CSDRRealArray?
+#warning replace with CSDRRealArray?
 struct dsp_context {
     float floats[4];
 };
 
-double subtractTimes( uint64_t endTime, uint64_t startTime );
-
-NSDictionary *freqXlate(CSDRComplexArray *inputData, float localOscillator, int sampleRate);
+CSDRComplexArray *freqXlate(CSDRComplexArray *inputData, float localOscillator, int sampleRate);
 CSDRRealArray *quadratureDemod(CSDRComplexArray *input, float gain, float offset);
 
 // Bootstrap the process by setting average = NAN
