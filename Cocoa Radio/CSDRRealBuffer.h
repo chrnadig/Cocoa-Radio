@@ -10,6 +10,8 @@
 #import <CoreAudio/AudioHardware.h>
 #import <AudioUnit/AudioUnit.h>
 
+@class CSDRRealArray;
+
 @interface CSDRRealBuffer : NSObject
 
 @property (readonly) NSInteger fillLevel;
@@ -22,7 +24,7 @@
 - (id)initWithCapacity:(NSInteger)capacity;
 
 // store data in the ring buffer
-- (void)storeData:(NSData *)data;
+- (void)storeData:(CSDRRealArray *)data;
 
 // fetch data into audio buffer
 - (void)fetchFrames:(NSUInteger)nFrames into:(AudioBufferList *)ioData;

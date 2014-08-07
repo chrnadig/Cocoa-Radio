@@ -6,10 +6,7 @@
 //  Copyright (c) 2012. All rights reserved. Licensed under the GPL v.2
 //
 
-#define CSDRAPPDELEGATE_M
 #import "CSDRAppDelegate.h"
-#warning required?
-#undef  CSDRAPPDELEGATE_M
 #import "CSDRComplexArray.h"
 #import "CSDRAudioDevice.h"
 #import "CSDRRealBuffer.h"
@@ -22,14 +19,11 @@
 // set to 0 for dummy testinput
 #define TESTINPUT   1
 
-// This block size sets the frequency that the read loop runs
-// sample rate / block size = block rate
+// This block size sets the frequency that the read loop runs sample rate / block size = block rate
 #define BLOCKSIZE    20480
 #define FFT_SIZE      2048
 
 @implementation CSDRAppDelegate
-
-@synthesize window = _window;
 
 - (void)demodLoop
 {
@@ -71,7 +65,7 @@
                     for (NSDictionary *raw in blockArray) {
                         if (raw == nil)
                             continue;
-                        NSData *audio = [demodulator demodulateData:raw];
+                        CSDRRealArray *audio = [demodulator demodulateData:raw];
                         [audioOutput bufferData:audio];
                     }
                 [demodulatorLock unlock];
@@ -81,7 +75,7 @@
             if (complexRaw) {
                 // Process the block
                 [demodulatorLock lock];
-                NSData *audio = [demodulator demodulateData:complexRaw];
+                CSDRRealArray *audio = [demodulator demodulateData:complexRaw];
                 [demodulatorLock unlock];
                 
                 // Send it to the audio device
@@ -136,49 +130,6 @@
     }
 }
 
-- (void)applyDefaultPreferences
-{
-    NSString *audioSampleRateKey = @"defaultAudioSampleRate";
-    NSString *audioSampleRate = @"48000";
-
-    NSString *radioSampleRateKey = @"defaultRadioSampleRate";
-    NSString *radioSampleRate = @"2048000";
-
-    // Set up the preference.
-    CFPreferencesSetAppValue((__bridge CFStringRef)(audioSampleRateKey),
-                             (__bridge CFPropertyListRef)(audioSampleRate),
-                             kCFPreferencesCurrentApplication);
-
-    CFPreferencesSetAppValue((__bridge CFStringRef)(radioSampleRateKey),
-                             (__bridge CFPropertyListRef)(radioSampleRate),
-                             kCFPreferencesCurrentApplication);
-
-    // Write out the preference data.
-    CFPreferencesAppSynchronize(kCFPreferencesCurrentApplication);
-}
-
-- (void)getPreferences
-{
-    NSString *audioSampleRateKey = @"defaultAudioSampleRate";
-    CFStringRef audioSampleRate;
-    
-    NSString *radioSampleRateKey = @"defaultRadioSampleRate";
-    CFStringRef radioSampleRate;
-
-    // Read the preferences
-    audioSampleRate = (CFStringRef)CFPreferencesCopyAppValue((__bridge CFStringRef)(audioSampleRateKey),
-                                                             kCFPreferencesCurrentApplication);
-    radioSampleRate = (CFStringRef)CFPreferencesCopyAppValue((__bridge CFStringRef)(radioSampleRateKey),
-                                                             kCFPreferencesCurrentApplication);
-    
-    afSampleRate = [(__bridge NSString *)audioSampleRate floatValue];
-    rfSampleRate = [(__bridge NSString *)radioSampleRate floatValue];
-    
-    // When finished with value, you must release it
-//    CFRelease(audioSampleRate);
-//    CFRelease(radioSampleRate);
-}
-
 #if TESTINPUT
 // dummy thread for testing
 - (void)dummyReceiverLoop:(id)obj
@@ -207,18 +158,15 @@
         // start dummy data thread for testing
         [NSThread detachNewThreadSelector:@selector(dummyReceiverLoop:) toTarget:self withObject:nil];
 #else
-        NSAlert *alert = [NSAlert alertWithMessageText:@"No device found"
-                                         defaultButton:@"Close"
-                                       alternateButton:nil
-                                           otherButton:nil
-                             informativeTextWithFormat:@"Cocoa Radio was unable find any devices."];
+        NSAlert *alert = [NSAlert alertWithMessageText:@"No device found" defaultButton:@"Close" alternateButton:nil
+                                  otherButton:nil informativeTextWithFormat:@"Cocoa Radio was unable find any devices."];
         
         // Wait for the user to click it
         [alert runModal];
         
         // Shut down the app
         NSApplication *app = [NSApplication sharedApplication];
-        [app stop:self];
+        [app terminate:nil];
 #endif
         return;
     }
@@ -229,11 +177,8 @@
     device = [[RTLSDRDevice alloc] initWithDeviceIndex:0];
     if (device == nil) {
         // Display an error and close
-        NSAlert *alert = [NSAlert alertWithMessageText:@"Unable to open device"
-                                         defaultButton:@"Close"
-                                       alternateButton:nil
-                                           otherButton:nil
-                             informativeTextWithFormat:@"Cocoa Radio was unable to open the selected device."];
+        NSAlert *alert = [NSAlert alertWithMessageText:@"Unable to open device" defaultButton:@"Close" alternateButton:nil
+                                  otherButton:nil informativeTextWithFormat:@"Cocoa Radio was unable to open the selected device."];
         
         // Wait for the user to click it
         [alert runModal];

@@ -35,7 +35,7 @@
     return [self initWithRFRate:2048000 AFRate:48000];
 }
 
-- (NSData *)demodulateData:(CSDRComplexArray *)complexInput
+- (CSDRRealArray *)demodulateData:(CSDRComplexArray *)complexInput
 {
 #if 0
     // Make sure that the temporary arrays are big enough

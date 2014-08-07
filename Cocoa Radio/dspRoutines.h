@@ -14,6 +14,7 @@
 @class AudioSink, CSDRComplexArray;
 
 // data structure for DSP context
+#warning remove with CSDRRealArray?
 struct dsp_context {
     float floats[4];
 };

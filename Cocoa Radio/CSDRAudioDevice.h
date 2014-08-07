@@ -7,11 +7,10 @@
 //
 
 #import <Foundation/Foundation.h>
-
 #import <CoreAudio/AudioHardware.h>
 #import <AudioUnit/AudioUnit.h>
 
-@class CSDRRealBuffer;
+@class CSDRRealArray, CSDRRealBuffer;
 
 @interface CSDRAudioDevice : NSObject
 
@@ -40,7 +39,7 @@
     BOOL discontinuity;
 }
 
-- (void)bufferData:(NSData *)data;
+- (void)bufferData:(CSDRRealArray *)input;
 
 // This is used to mark a discontinuity, such as frequency change
 // It's purpose is to discard packets in the buffer before the

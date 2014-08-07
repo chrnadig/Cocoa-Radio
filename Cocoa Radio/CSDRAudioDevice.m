@@ -10,6 +10,7 @@
 #import <AudioToolbox/AudioUnitUtilities.h>
 #import <mach/mach_time.h>
 #import "CSDRAudioDevice.h"
+#import "CSDRRealArray.h"
 #import "CSDRRealBuffer.h"
 #import "CSDRAppDelegate.h"
 #import "audioprobes.h"
@@ -295,16 +296,8 @@ OSStatus OutputProc(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, c
             uint64_t this_time = TimeStamp->mHostTime;
             double deltaTime = subtractTimes(this_time, last_buffer_time);
             double derivedSampleRate = inNumberFrames / deltaTime;
-            int fillLevel = ringBuffer.fillLevel;
-            int deltaTime_us;
-            
-            if (last_buffer_time == 0) {
-                deltaTime_us = 0;
-            } else {
-                deltaTime_us = deltaTime * 1000000;
-            }
+            int fillLevel = (int)ringBuffer.fillLevel;
             last_buffer_time = this_time;
-
             COCOARADIOAUDIO_AUDIOBUFFER((int)derivedSampleRate, fillLevel);
         }
 
@@ -425,9 +418,9 @@ OSStatus OutputProc(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, c
     // [self.ringBuffer clear];
 }
 
--(void)bufferData:(NSData *)data
+-(void)bufferData:(CSDRRealArray *)input
 {
-    [self.ringBuffer storeData:data];
+    [self.ringBuffer storeData:input];
 
     // If it's not started yet, wait until 1/8 of a second is available
     if (!self.running) {

@@ -7,7 +7,8 @@
 //
 
 #import "CSDRRealBuffer.h"
-#include "audioprobes.h"
+#import "CSDRRealArray.h"
+#import "audioprobes.h"
 
 // private declarations
 @interface CSDRRealBuffer ()
@@ -54,10 +55,10 @@
 }
 
 // store data in the ring buffer
-- (void)storeData:(NSData *)newData
+- (void)storeData:(CSDRRealArray *)data
 {
-    float *src = (float *)[newData bytes];
-    NSUInteger n = [newData length] / sizeof(float);
+    float *src = data.realp;
+    NSUInteger n = data.length;
     
     [self.lock lock];
     // DTrace it

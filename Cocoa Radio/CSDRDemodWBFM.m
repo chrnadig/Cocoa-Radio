@@ -39,7 +39,7 @@
     return [self initWithRFRate:2048000 AFRate:48000];
 }
 
-- (NSData *)demodulateData:(CSDRComplexArray *)complexInput
+- (CSDRRealArray *)demodulateData:(CSDRComplexArray *)complexInput
 {
     // Make sure that the temporary arrays are big enough
     NSUInteger samples = complexInput.length;
@@ -81,7 +81,7 @@
         
         bool mute = (powerSample > self.squelch)? NO : YES;
         float audioSample = audioSamples[i];
-        audioSamples[i] = (mute)? 0. : audioSample;
+        audioSamples[i] = (mute)? 0.0 : audioSample;
     }
     
     // Copy average power into the rfPower property
@@ -89,7 +89,7 @@
     self.rfPower = newAverage * 10.0;
 
     // Rational resampling
-    return [self.afResampler resample:audioFiltered].data;
+    return [self.afResampler resample:audioFiltered];
 }
 
 // accessors for read-only properties

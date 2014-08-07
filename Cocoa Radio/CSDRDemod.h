@@ -41,6 +41,6 @@
 - (id)initWithRFRate:(float)rfRate AFRate:(float)afRate;
 
 // demodulate sampled data
-- (NSData *)demodulateData:(CSDRComplexArray *)complexInput;
+- (CSDRRealArray *)demodulateData:(CSDRComplexArray *)complexInput;
 
 @end
