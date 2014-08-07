@@ -8,6 +8,8 @@
 
 #import "CSDRDemodNBFM.h"
 #import "CSDRComplexArray.h"
+#import "CSDRComplexLowPassFilter.h"
+#import "CSDRRealLowPassFilter.h"
 #import "dspRoutines.h"
 #import "dspprobes.h"
 
@@ -34,6 +36,7 @@
 
 - (NSData *)demodulateData:(CSDRComplexArray *)complexInput
 {
+#if 0
     // Make sure that the temporary arrays are big enough
     NSUInteger samples = complexInput.length;
     if ([self.radioPower length] < (samples * sizeof(float))) {
@@ -85,6 +88,9 @@
     
     // Rational resampling
     return [self.afResampler resample:audioFiltered];
+#else
+    return nil;
+#endif
 }
 
 // accessors for read-only properties

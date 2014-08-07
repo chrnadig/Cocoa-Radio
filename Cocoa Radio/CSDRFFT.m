@@ -38,7 +38,7 @@
             _fftSetup = vDSP_create_fftsetup(_log2n, FFT_RADIX2);
             if (_fftSetup != NULL) {
                 // allocate buffers
-                _buffer = [CSDRComplexArray arraywithLength:initSize];
+                _buffer = [CSDRComplexArray arrayWithLength:initSize];
                 _magBuffer = [CSDRRealArray arrayWithLength:initSize];
                 _ringBuffer = [CSDRComplexBuffer bufferWithCapacity:initSize * 1024];
                 // processing synchronization
@@ -88,8 +88,8 @@
 {
     @autoreleasepool {
         
-        CSDRComplexArray *input = [CSDRComplexArray arraywithLength:self.size];
-        CSDRComplexArray *output = [CSDRComplexArray arraywithLength:self.size];
+        CSDRComplexArray *input = [CSDRComplexArray arrayWithLength:self.size];
+        CSDRComplexArray *output = [CSDRComplexArray arrayWithLength:self.size];
         NSUInteger halfSize = self.size / 2;
 
         // loop until thread is cancelled

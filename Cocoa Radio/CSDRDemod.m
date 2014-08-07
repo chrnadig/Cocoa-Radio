@@ -9,9 +9,12 @@
 #import "dspRoutines.h"
 #import "dspprobes.h"
 #import "CSDRComplexArray.h"
+#import "CSDRRealArray.h"
 #import "CSDRDemodAM.h"
 #import "CSDRDemodWBFM.h"
 #import "CSDRDemodNBFM.h"
+#import "CSDRComplexLowPassFilter.h"
+#import "CSDRRealLowPassFilter.h"
 
 @implementation CSDRDemod
 
@@ -50,7 +53,7 @@
         _afFilter.bandwidth  = afRate / 2.0;
         _afFilter.skirtWidth = 10000.0;
         _squelch = 0.0;
-        _radioPower = [NSMutableData new];
+        _radioPower = [CSDRRealArray new];
     }
     
     return self;

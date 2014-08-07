@@ -8,23 +8,14 @@
 
 #import <Foundation/Foundation.h>
 
+@class CSDRRealArray;
+
 @interface CSDRFilter : NSObject
 
 @property (readwrite, nonatomic) float bandwidth;
 @property (readwrite, nonatomic) float skirtWidth;
 @property (readwrite, nonatomic) float gain;
 @property (readwrite, nonatomic) NSInteger sampleRate;
-
-@end
-
-@interface CSDRComplexLowPassFilter : CSDRFilter
-
-- (NSDictionary *)filterDict:(NSDictionary *)input;
-
-@end
-
-@interface CSDRRealLowPassFilter : CSDRFilter
-
-- (NSData *)filterData:(NSData *)input;
+@property (readwrite) CSDRRealArray *taps;
 
 @end

@@ -10,6 +10,7 @@
 #import <Accelerate/Accelerate.h>
 #import <mach/mach_time.h>
 #import "CSDRComplexArray.h"
+#import "CSDRRealArray.h"
 #import "dspRoutines.h"
 
 #define ACCELERATE_XLATE
@@ -33,53 +34,6 @@ double subtractTimes( uint64_t endTime, uint64_t startTime )
 	}
 	
 	return conversion * (double) difference;
-}
-
-NSDictionary *
-createComplexTone(int samples, float sampleRate, float frequency, float *lastPhase)
-{
-    NSMutableData *realData = [[NSMutableData alloc] initWithLength:samples * sizeof(float)];
-    NSMutableData *imagData = [[NSMutableData alloc] initWithLength:samples * sizeof(float)];
-    
-    // If provided, copy the input phase
-    float phaseOffset = 0.;
-    if (lastPhase != nil) {
-        phaseOffset = *lastPhase;
-    }
-    
-    float delta_phase = frequency / sampleRate;
-
-    // Create the phase array
-    float *phase = malloc(sizeof(float) * samples);
-    if (phase == NULL) {
-        NSLog(@"Unable to allocate phase array!");
-        return nil;
-    }
-    
-    for (int i = 0; i < samples; i++) {
-        phase[i] = (delta_phase * (float)i) + phaseOffset;
-        phase[i] = fmod(phase[i], 1.) * 2.;
-    }
-    
-    // Vectorized cosine and sines
-    float *real = [realData mutableBytes];
-    float *imag = [imagData mutableBytes];
-    DSPSplitComplex coeff;
-    coeff.realp = real;
-    coeff.imagp = imag;
-    vvsinpif(coeff.realp, phase, &samples);
-    vvcospif(coeff.imagp, phase, &samples);
-
-    free(phase);
-    
-    // If possible, return the last phase
-    if (lastPhase != nil) {
-        *lastPhase = fmod(samples * delta_phase + phaseOffset, 1.);
-    }
-    
-    // Return the results
-    return @{ @"real" : realData,
-              @"imag" : imagData};
 }
 
 // This function first "mixes" the input frequency with a local oscillator
@@ -170,262 +124,124 @@ NSDictionary *freqXlate(CSDRComplexArray *inputData, float localOscillator, int 
               @"imag" : imagData };
 }
 
-NSData *
-quadratureDemod(NSDictionary *inputDict, float gain, float offset)
+CSDRRealArray *quadratureDemod(CSDRComplexArray *input, float gain, float offset)
 {
-    static float lastReal = 0.;
-    static float lastImag = 0.;
+    static float lastReal = 0.0;
+    static float lastImag = 0.0;
     
-    NSData *realIn = inputDict[@"real"];
-    NSData *imagIn = inputDict[@"imag"];
+    int count = (int)input.length;
     
-    if (realIn == nil || imagIn == nil) {
-        NSLog(@"One or more input to freq xlate was nil");
-        return nil;
-    }
-    
-    if ([realIn length] != [imagIn length]) {
-        NSLog(@"Size of real and imaginary data arrays don't match.");
-    }
-    
-    int count = (int)[realIn length] / sizeof(float);
-    
-    DSPSplitComplex input;
-    input.realp = (float *)[realIn bytes];
-    input.imagp = (float *)[imagIn bytes];
-    
-    NSMutableData *realData = [[NSMutableData alloc] initWithLength:sizeof(float) * count];
-    NSMutableData *imagData = [[NSMutableData alloc] initWithLength:sizeof(float) * count];
-    DSPSplitComplex result;
-    result.realp  = (float *)[realData mutableBytes];
-    result.imagp  = (float *)[imagData mutableBytes];
-    
-    NSMutableData *resultData = [[NSMutableData alloc] initWithLength:count * sizeof(float)];
-    float *resultFloats = (float *)[resultData mutableBytes];
-    
-    uint64_t startTime = mach_absolute_time();
-    
-#ifdef ACCELERATE_DEMOD
-    
-    // Quadrature demodulation works by (complex) multiplying
-    // the complex conjugate of the previous sample with the current
+    CSDRRealArray *output = [CSDRRealArray arrayWithLength:input.length];
+    CSDRComplexArray *result = [CSDRComplexArray arrayWithLength:input.length];
 
-// First, normalize the input vectors to be on the unit circle
-    // Compute the magnitude of the vectors
-//    float *scalars = malloc(count * sizeof(float));
-//    float *mags    = malloc(count * sizeof(float));
-    
-    // Fill the scalars with zeros for the origin (0,0)
-//    vDSP_vclr(scalars, 1, count);
-    
-    // Calculate the vector distance from the origin (pythagoras)
-//    vDSP_vpythg(input.realp, 1, scalars, 1,
-//                input.imagp, 1, scalars, 1,
-//                mags, 1, count);
-    
-    // Multiply the input by the inverse of the distance
-    // Set the scalar array to 1 for computing the inverse
-//    float value = 1.;
-//    vDSP_vfill(&value, scalars, 1, count);
-    
-    // Divide one by the distance to find the scaling value
-    // Can we use an input array as the output???
-//    vDSP_vdiv(scalars, 1, mags, 1, mags, 1, count);
-    
-    // Scale the input by the calculated scaling value
-//    vDSP_vmul(mags, 1, input.realp, 1, input.realp, 1, count);
-//    vDSP_vmul(mags, 1, input.imagp, 1, input.realp, 1, count);
-    
-
-// Next, we'll copy the normalized input into another array, shifted
-    // to the right one element.  Then, we'll put the "lastsample"
+    // we'll copy the normalized input into another array, shifted to the right one element.  Then, we'll put the "lastsample"
     // into the head element.
-    DSPSplitComplex temp;
-    temp.realp = malloc([realIn length]);
-    temp.imagp = malloc([imagIn length]);
+    CSDRComplexArray *temp = [CSDRComplexArray arrayWithLength:input.length];
     temp.realp[0] = lastReal;
-    temp.imagp[1] = lastImag;
-    memcpy(&temp.realp[1], input.realp, [realIn length] - sizeof(float));
-    memcpy(&temp.imagp[1], input.imagp, [imagIn length] - sizeof(float));
+    temp.imagp[0] = lastImag;
+    [input copyToArray:temp numElements:input.length - 1 fromIndex:0 toIndex:1];
     
     // Vectorized complex multiplication
-    vDSP_zvmul(&input, 1, &temp, 1, &result, 1, count, -1);
+#warning can this be done in place?
+    vDSP_zvmul(input.complexp, 1, temp.complexp, 1, result.complexp, 1, count, -1);
     
     // Vectorized angle computation
-    vvatan2f(resultFloats, result.realp, result.imagp, &count);
+    vvatan2f(output.realp, result.realp, result.imagp, &count);
     
     // Vectorized gain multiplication
-    vDSP_vsmsa(resultFloats, 1, &gain, &offset, resultFloats, 1, count);
+    vDSP_vsmsa(output.realp, 1, &gain, &offset, output.realp, 1, count);
     
-    free(temp.realp);
-    free(temp.imagp);
-#else
-    
-    // Iterate through the array
-    for (int i = 0; i < count; i++) {
-        float conjReal;
-        float conjImag;
-        
-        // Normallize the current element.  This should also
-        // normallize the conjugate because it'll already by
-        // normallized.
-        float length = sqrtf((input.realp[i] * input.realp[i]) +
-                             (input.imagp[i] * input.imagp[i]));
-        float scalar = 1. / length;
-        input.realp[i] = input.realp[i] * scalar;
-        input.imagp[i] = input.imagp[i] * scalar;
-        
-        if (i == 0) {
-            conjReal = lastReal;
-            conjImag = lastImag * -1.;
-        } else {
-            conjReal = input.realp[i-1];
-            conjImag = input.imagp[i-1] * -1;
-        }
-        
-        const float real = input.realp[i];
-        const float imag = input.imagp[i];
-        
-        // Complex multiplication (downconversion)
-        float first = real * conjReal; // First
-        float outer = real * conjImag; // Outer
-        float inner = imag * conjReal; // Inner
-        float last  = imag * conjImag; // Last
-        
-        float productReal = first - last;
-        float productImag = outer + inner;
-
-        float angle = atan2f(productReal, productImag);
-        
-        resultFloats[i] = angle * gain;
-    }
-#endif
-    
-    uint64_t endTime = mach_absolute_time();
-    
-    float deltaTime = subtractTimes(endTime, startTime);
-    
-    static int counter = 0;
-    static float runningAverage = 0.;
-    
-    counter += 1;
-    runningAverage += deltaTime;
-    
-    if (counter == 1000) {
-//        NSLog(@"Average runtime: %f", runningAverage / 1000);
-        
-        counter = 0;
-        runningAverage = 0.;
-    }
-    
+    // save last value for next time
     lastReal = input.realp[count - 1];
     lastImag = input.imagp[count - 1];
     
     // Return the results
-    return resultData;
+    return output;
 }
 
-void removeDC(NSMutableData *data, double *average, double alpha)
+void removeDC(CSDRRealArray *input, double *average, double alpha)
 {
-    int length = (int)[data length] / sizeof(float);
-    float *realSamples = [data mutableBytes];
-
 #if 0
+    int length = (int)input.length;
+    float *realSamples = [data mutableBytes];
+    
     // Bootstrap DC offset correction and handle bad floats
     if (!isfinite(*average)) {
         *average = realSamples[0];
     }
     
     // Do the filter
-//TODO:  I should be able to use accelerate framework to speed this up
+    //TODO:  I should be able to use accelerate framework to speed this up
     for (int i = 0; i < length; i++) {
         *average = (*average * (1. - alpha)) + (realSamples[i] * alpha);
         realSamples[i] = realSamples[i] - *average;
     }
 #else
     float m;
-    vDSP_meanv(realSamples, 1, &m, length);
+    vDSP_meanv(input.realp, 1, &m, input.length);
     m = -m;
-    vDSP_vsadd(realSamples, 1, &m, realSamples, 1, length);
+    vDSP_vsadd(input.realp, 1, &m, input.realp, 1, input.length);
     *average = -m;
 #endif
 }
 
 // requires a 4-element float context array
-void getPower(NSDictionary *input, NSMutableData *output, struct dsp_context *context, double alpha)
-{
-    NSData *realData = input[@"real"];
-    NSData *imagData = input[@"imag"];
-    
-    int length = (int)[realData length] / sizeof(float);
-    const float *realSamples = [realData bytes];
-    const float *imagSamples = [imagData bytes];
-
-    COMPLEX_SPLIT complexInput;
-    complexInput.realp = (float *)realSamples;
-    complexInput.imagp = (float *)imagSamples;
-    
-    float *outSamples = [output mutableBytes];
-//    float tempSamples[length];
-
-#ifdef ACCELERATE_POWER
-    float *tempInput  = malloc((length + 2) * sizeof(float));
-    float *tempOutput = malloc((length + 2) * sizeof(float));
-    
-    // Calcluate the magnitudes from the input array (starting at index 2)
-    vDSP_zvmags(&complexInput, 1, &tempInput[2], 1, length);
-    // Copy the context into the first two spots
-    memcpy(tempInput, &context->floats[0], 2 * sizeof(float));
-    // Copy the context into the start of the output
-    memcpy(tempOutput, &context->floats[2], 2 * sizeof(float));
-    
-    // Setup the IIR as a 2 pole, 2 zero differential equation
-    float coeff[5] = {1. - alpha, 0., 0., -1 * alpha, 0.};
-    vDSP_deq22(tempInput, 1, coeff, tempOutput, 1, length);
-    
-    // Copy the context info out
-    memcpy(&context->floats[0], &tempInput[length], 2 * sizeof(float));
-    memcpy(&context->floats[2], &tempOutput[length], 2 * sizeof(float));
-    
-    // Calculate the dbs of the resuling value
-    float zeroRef = 1.;
-    vDSP_vdbcon(tempSamples, 1, &zeroRef, outSamples, 1, length, 0);
-    
-    // Copy the results into the output array
-    memcpy(tempOutput, tempOutput, length * sizeof(float));
-    free(tempInput);
-    free(tempOutput);
-
-#else
-    float *tempInput  = malloc(length * sizeof(float));
-    float *tempOutput = malloc(length * sizeof(float));
-
-    // Calcluate the magnitudes from the input array (starting at index 2)
-    vDSP_zvmags(&complexInput, 1, tempInput, 1, length);
-    
-    // Pre-multiply the magnitudes by alpha using accelerate
-    float falpha = alpha;
-    vDSP_vsmul(tempInput, 1, &falpha, tempInput, 1, length);
-    
-    // Compute the power average
-    float average = context->floats[0];
-    for (int i = 0; i < length; i++) {
-        // Magnitude using sum of squares
-        float magnitude = tempInput[i];
+void getPower(CSDRComplexArray *input, CSDRRealArray *output, struct dsp_context *context, double alpha)
+    {
+        CSDRRealArray *tempInput = [CSDRRealArray arrayWithLength:input.length + 2];
+        CSDRRealArray *tempOutput = [CSDRRealArray arrayWithLength:input.length + 2];
         
-        // Cheezy single-pole IIR low-pass filter
-        average = (average * (1. - alpha)) + magnitude;
-        tempOutput[i] = average;
-    }
-    
-    // compute the log-10 db
-    float zeroRef = 1.;
-    vDSP_vdbcon(tempOutput, 1, &zeroRef, outSamples, 1, length, 0);
-
-    // Book keeping
-    context->floats[0] = average;
-    free(tempInput);
-    free(tempOutput);
+#warning fix accelerated version and use this one
+#ifdef ACCELERATE_POWER
+        float coeff[5] = {1.0 - alpha, 0.0, 0.0, -alpha, 0.0};
+        // Calcluate the magnitudes from the input array (starting at index 2)
+        vDSP_zvmags(input.complexp, 1, tempInput.realp + 2, 1, input.length);
+        // Copy the context into the first two spots
+        memcpy(tempInput.realp, &context->floats[0], 2 * sizeof(float));
+        // Copy the context into the start of the output
+        memcpy(tempOutput.realp, &context->floats[2], 2 * sizeof(float));
+        
+        // Setup the IIR as a 2 pole, 2 zero differential equation
+        vDSP_deq22(tempInput.realp, 1, coeff, tempOutput.realp, 1, input.length);
+        
+        // Copy the context info out
+        memcpy(&context->floats[0], tempInput.realp + input.length, 2 * sizeof(float));
+        memcpy(&context->floats[2], tempOutput.realp + input.length, 2 * sizeof(float));
+        
+        // Calculate the dbs of the resuling value
+        float zeroRef = 1.;
+        vDSP_vdbcon(tempSamples, 1, &zeroRef, outSamples, 1, length, 0);
+        
+        // Copy the results into the output array
+#warning this does nothing!
+        memcpy(tempOutput, tempOutput, length * sizeof(float));
+#else
+        static const float zeroRef = 1.0;
+        NSUInteger length = input.length;
+        // Calcluate the magnitudes from the input array (starting at index 2)
+#warning index 2?
+        vDSP_zvmags(input.complexp, 1, tempInput.realp, 1, length);
+        
+        // Pre-multiply the magnitudes by alpha using accelerate
+        float falpha = alpha;
+        vDSP_vsmul(tempInput.realp, 1, &falpha, tempInput.realp, 1, length);
+        
+        // Compute the power average
+        float average = context->floats[0];
+        for (int i = 0; i < length; i++) {
+            // Magnitude using sum of squares
+            float magnitude = tempInput.realp[i];
+            
+            // Cheezy single-pole IIR low-pass filter
+            average = average * (1.0 - alpha) + magnitude;
+            tempOutput.realp[i] = average;
+        }
+        
+        // compute the log-10 db
+        vDSP_vdbcon(tempOutput.realp, 1, &zeroRef, output.realp, 1, length, 0);
+        
+        // book-keeping
+        context->floats[0] = average;
 #endif
 }
 

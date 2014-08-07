@@ -17,12 +17,21 @@
 @property (readonly) NSUInteger length;
 
 // convenience constructor
-+ (instancetype)arraywithLength:(NSUInteger)length;
++ (instancetype)arrayWithLength:(NSUInteger)length;
 
 // initializer
 - (instancetype)initWithLength:(NSUInteger)length;
 
+// copy complex floats to another array - not thread safe
+- (void)copyToArray:(CSDRComplexArray *)other numElements:(NSUInteger)numElements fromIndex:(NSUInteger)fromIndex toIndex:(NSUInteger)toIndex;
+
 // clear array (set all values to 0.0)
 - (void)clear;
+
+
+#warning for backward compatibility only - remove when done!
++ (instancetype)arrayWithDict:(NSDictionary *)dict;
+#warning for backward compatibility only - remove when done!
+- (NSMutableDictionary *)dict;
 
 @end

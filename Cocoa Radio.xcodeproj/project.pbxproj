@@ -45,6 +45,8 @@
 		3CE31D6D15F013DC00F0123B /* CSDRAudioDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CE31D6C15F013DB00F0123B /* CSDRAudioDevice.m */; };
 		3CE31DB315F12E3800F0123B /* CSDRRealBuffer.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CE31DB215F12E3800F0123B /* CSDRRealBuffer.m */; };
 		3CE31DB515F130E500F0123B /* audioprobes.d in Sources */ = {isa = PBXBuildFile; fileRef = 3CE31DB415F130E500F0123B /* audioprobes.d */; };
+		651EFE1E1993A1E600784144 /* CSDRComplexLowPassFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 651EFE1B1993A1E600784144 /* CSDRComplexLowPassFilter.m */; };
+		651EFE1F1993A1E600784144 /* CSDRRealLowPassFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 651EFE1D1993A1E600784144 /* CSDRRealLowPassFilter.m */; };
 		65CE669919825466002C05D4 /* rtl-sdr.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65CE669819825466002C05D4 /* rtl-sdr.framework */; };
 		65D255FB198AC4C300C4AF49 /* CSDRComplexArray.m in Sources */ = {isa = PBXBuildFile; fileRef = 65D255F8198AC4C300C4AF49 /* CSDRComplexArray.m */; };
 		65D255FC198AC4C300C4AF49 /* CSDRRealArray.m in Sources */ = {isa = PBXBuildFile; fileRef = 65D255FA198AC4C300C4AF49 /* CSDRRealArray.m */; };
@@ -149,6 +151,10 @@
 		3CE31DB115F12E3800F0123B /* CSDRRealBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CSDRRealBuffer.h; sourceTree = "<group>"; };
 		3CE31DB215F12E3800F0123B /* CSDRRealBuffer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CSDRRealBuffer.m; sourceTree = "<group>"; };
 		3CE31DB415F130E500F0123B /* audioprobes.d */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.dtrace; path = audioprobes.d; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.c; };
+		651EFE1A1993A1E600784144 /* CSDRComplexLowPassFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CSDRComplexLowPassFilter.h; sourceTree = "<group>"; };
+		651EFE1B1993A1E600784144 /* CSDRComplexLowPassFilter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CSDRComplexLowPassFilter.m; sourceTree = "<group>"; };
+		651EFE1C1993A1E600784144 /* CSDRRealLowPassFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CSDRRealLowPassFilter.h; sourceTree = "<group>"; };
+		651EFE1D1993A1E600784144 /* CSDRRealLowPassFilter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CSDRRealLowPassFilter.m; sourceTree = "<group>"; };
 		65CE669819825466002C05D4 /* rtl-sdr.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = "rtl-sdr.framework"; path = "../Softshell/rtl-sdr/build/Debug/rtl-sdr.framework"; sourceTree = "<group>"; };
 		65D255F7198AC4C300C4AF49 /* CSDRComplexArray.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CSDRComplexArray.h; sourceTree = "<group>"; };
 		65D255F8198AC4C300C4AF49 /* CSDRComplexArray.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CSDRComplexArray.m; sourceTree = "<group>"; };
@@ -187,6 +193,10 @@
 				3C9DCD2715EEBE7B0032EDD9 /* CSDRFFT.m */,
 				3C4FDB0415ED616300D4B3AD /* CSDRFilter.h */,
 				3C4FDB0515ED616300D4B3AD /* CSDRFilter.m */,
+				651EFE1A1993A1E600784144 /* CSDRComplexLowPassFilter.h */,
+				651EFE1B1993A1E600784144 /* CSDRComplexLowPassFilter.m */,
+				651EFE1C1993A1E600784144 /* CSDRRealLowPassFilter.h */,
+				651EFE1D1993A1E600784144 /* CSDRRealLowPassFilter.m */,
 				3C4FDB0115ED611A00D4B3AD /* CSDRResampler.h */,
 				3C4FDB0215ED611A00D4B3AD /* CSDRResampler.m */,
 			);
@@ -435,6 +445,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				65D255FC198AC4C300C4AF49 /* CSDRRealArray.m in Sources */,
+				651EFE1E1993A1E600784144 /* CSDRComplexLowPassFilter.m in Sources */,
 				3C27C4F515813348001FD108 /* main.m in Sources */,
 				3C27C4FC15813348001FD108 /* CSDRAppDelegate.m in Sources */,
 				3C27C51915816B26001FD108 /* OpenGLController.m in Sources */,
@@ -456,6 +467,7 @@
 				3CADF1C4162C825E00B9FECC /* CSDRDemodAM.m in Sources */,
 				65D255FF198C28D900C4AF49 /* CSDRComplexBuffer.m in Sources */,
 				3C68163A162DCA2400ED8372 /* CSDRDemodWBFM.m in Sources */,
+				651EFE1F1993A1E600784144 /* CSDRRealLowPassFilter.m in Sources */,
 				65D255FB198AC4C300C4AF49 /* CSDRComplexArray.m in Sources */,
 				3C68163D162DCA7A00ED8372 /* CSDRDemodNBFM.m in Sources */,
 			);

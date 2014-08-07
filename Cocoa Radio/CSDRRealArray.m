@@ -39,6 +39,18 @@
     free(_realp);
 }
 
+// copy floats to another array - not thread safe
+- (void)copyToArray:(CSDRRealArray *)other numElements:(NSUInteger)numElements fromIndex:(NSUInteger)fromIndex toIndex:(NSUInteger)toIndex
+{
+    // some sanity checks first
+    if (fromIndex + numElements <= self.length && toIndex + numElements <= other.length) {
+        memcpy(other.realp + toIndex, self.realp + fromIndex, numElements * sizeof(float));
+    } else {
+        NSLog(@"-copyToArray called with invalid arguments: numElements = %lu, fromIndex = %lu, toIndex = %lu, fromLength = %lu, toLength = %lu",
+              numElements, fromIndex, toIndex, self.length, other.length);
+    }
+}
+
 // clear array (set all values to 0.0)
 - (void)clear
 {
@@ -98,6 +110,21 @@
     }
     [string appendString:@" }"];
     return string;
+}
+
+
+#warning for backward compatibility only - remove when done!
++ (instancetype)arrayWithData:(NSData *)data
+{
+    CSDRRealArray *array = [self arrayWithLength:[data length] / sizeof(float)];
+    memcpy(array.realp, [data bytes], [data length]);
+    return array;
+}
+
+#warning for backward compatibility only - remove when done!
+- (NSMutableData *)data
+{
+    return [NSMutableData dataWithBytes:self.realp length:self.length * sizeof(float)];
 }
 
 @end

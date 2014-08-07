@@ -110,7 +110,7 @@
         int blocksize = (int)[inputData length] / 2;
         
         // We need them to be floats (Real [Inphase] and Imaqinary [Quadrature])
-        CSDRComplexArray *data = [CSDRComplexArray arraywithLength:blocksize];
+        CSDRComplexArray *data = [CSDRComplexArray arrayWithLength:blocksize];
         float *realp  = data.realp;
         float *imagp  = data.imagp;
         
@@ -124,6 +124,7 @@
         [fftProcessor addSamples:data];
 
         [demodCondition lock];
+#warning replace with improved (i.e. non-copying ring buffer)?
         int count = (int)[demodFIFO count];
         if (count > 100) {
             NSLog(@"WARNING: Demodulation isn't keeping up!");
@@ -183,14 +184,15 @@
 - (void)dummyReceiverLoop:(id)obj
 {
     uint8_t buf[BLOCKSIZE];
-    float duration = 1.0 / rfSampleRate * BLOCKSIZE;
+    float duration = 1.0 / rfSampleRate * (BLOCKSIZE / 2);
     NSData *data = [NSData dataWithBytesNoCopy:buf length:BLOCKSIZE];
     for (int i = 0; i < BLOCKSIZE; i += 2) {
-        buf[i] = buf[i+1] = rand();
+        buf[i] = buf[i + 1] = 127 + 127 * sin(i / BLOCKSIZE * 2 * 3.141592654);
+        buf[i] = buf[i + 1] = 127 + rand() / 10000;
     }
     while (1) {
         [self processRFBlock:data withDuration:duration];
-        [NSThread sleepForTimeInterval:duration];
+        [NSThread sleepForTimeInterval:duration - 0.001];
     }
 }
 #endif

@@ -8,13 +8,14 @@
 
 #import <Foundation/Foundation.h>
 
+@class CSDRRealArray;
+
 @interface CSDRResampler : NSObject
 
 @property (readwrite) NSInteger interpolator;
 @property (readwrite) NSInteger decimator;
 @property (readwrite) float lastSample;
 
-- (void)resampleFrom:(NSData *)input to:(NSMutableData *)output;
-- (NSData *)resample:(NSData *)input;
+- (CSDRRealArray *)resample:(CSDRRealArray *)input;
 
 @end

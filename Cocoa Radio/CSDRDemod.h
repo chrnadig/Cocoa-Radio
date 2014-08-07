@@ -8,14 +8,14 @@
 
 #import <Foundation/Foundation.h>
 
-@class CSDRComplexLowPassFilter, CSDRRealLowPassFilter, CSDRResampler, CSDRComplexArray;
+@class CSDRComplexLowPassFilter, CSDRRealLowPassFilter, CSDRResampler, CSDRComplexArray, CSDRRealArray;
 
 @interface CSDRDemod : NSObject
 
 @property (readwrite) CSDRComplexLowPassFilter *ifFilter;
 @property (readwrite) CSDRRealLowPassFilter *afFilter;
 @property (readwrite) CSDRResampler *afResampler;
-@property (readwrite) NSMutableData *radioPower;
+@property (readwrite) CSDRRealArray *radioPower;
 @property (readwrite, nonatomic) float rfSampleRate;
 @property (readwrite, nonatomic) float afSampleRate;
 @property (readwrite, nonatomic) float rfCorrectedRate;

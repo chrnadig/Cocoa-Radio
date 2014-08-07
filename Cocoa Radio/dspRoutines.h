@@ -21,11 +21,10 @@ struct dsp_context {
 double subtractTimes( uint64_t endTime, uint64_t startTime );
 
 NSDictionary *freqXlate(CSDRComplexArray *inputData, float localOscillator, int sampleRate);
-NSData *quadratureDemod(NSDictionary *inputDict, float gain, float offset);
-NSDictionary *createComplexTone(int samples, float sampleRate, float frequency, float *lastPhase);
+CSDRRealArray *quadratureDemod(CSDRComplexArray *input, float gain, float offset);
 
 // Bootstrap the process by setting average = NAN
-void removeDC(NSMutableData *data, double *average, double alpha);
+void removeDC(CSDRRealArray *input, double *average, double alpha);
 
 // Calculate power level from the given signal (log 10)
-void getPower(NSDictionary *input, NSMutableData *output, struct dsp_context *context, double alpha);
+void getPower(CSDRComplexArray *input, CSDRRealArray *output, struct dsp_context *context, double alpha);

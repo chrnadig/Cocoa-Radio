@@ -19,10 +19,19 @@
 // initializer
 - (instancetype)initWithLength:(NSUInteger)length;
 
+// copy floats to another array - not thread safe
+- (void)copyToArray:(CSDRRealArray *)other numElements:(NSUInteger)numElements fromIndex:(NSUInteger)fromIndex toIndex:(NSUInteger)toIndex;
+
 // clear array (set all values to 0.0)
 - (void)clear;
 
 - (void)setLengthGrowingAtHead:(NSUInteger)newLength;
 - (void)setLengthGrowingAtTail:(NSUInteger)newLength;
+
+#warning for backward compatibility only - remove when done!
++ (instancetype)arrayWithData:(NSData *)data;
+#warning for backward compatibility only - remove when done!
+- (NSMutableData *)data;
+
 
 @end
