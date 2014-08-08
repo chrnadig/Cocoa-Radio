@@ -105,7 +105,6 @@ void removeDC(CSDRRealArray *input, double *average, double alpha)
     *average = m;
     m = -m;
     vDSP_vsadd(input.realp, 1, &m, input.realp, 1, input.length);
-    NSLog(@"average = %f", *average);
 #endif
 }
 

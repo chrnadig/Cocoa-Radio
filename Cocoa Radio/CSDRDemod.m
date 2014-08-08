@@ -16,6 +16,12 @@
 #import "CSDRComplexLowPassFilter.h"
 #import "CSDRRealLowPassFilter.h"
 
+// private declarations
+@interface CSDRDemod ()
+@property (readwrite) double average;
+@property (readwrite) struct dsp_context powerContext;
+@end
+
 @implementation CSDRDemod
 
 // factory class method
@@ -66,7 +72,61 @@
 }
 
 // demodulate sampled data
-- (NSData *)demodulateData:(CSDRComplexArray *)complexInput
+- (CSDRRealArray *)demodulateData:(CSDRComplexArray *)complexInput
+{
+    NSUInteger samples = complexInput.length;
+    
+    // Make sure that the temporary arrays are big enough
+    if (self.radioPower.length < samples) {
+        // allocate new array with larger size and copy contents from old buffer
+        CSDRRealArray *oldRadioPower = self.radioPower;
+        self.radioPower = [CSDRRealArray arrayWithLength:samples];
+        // copy old contents, new space (zeroed) at end
+        [self.radioPower copyFromArray:oldRadioPower length:oldRadioPower.length fromIndex:0 toIndex:0];
+    }
+    
+    // Down convert
+    CSDRComplexArray *baseBand = freqXlate(complexInput, self.centerFreq, self.rfSampleRate);
+    
+    // Low-pass filter
+    CSDRComplexArray *filtered = [self.ifFilter filter:baseBand];
+    
+    // Get an array of signal power levels for squelch
+    getPower(filtered, self.radioPower, &_powerContext, .0001);
+    
+    // do modulation specific demodulation (implemented by subclasses)
+    CSDRRealArray *demodulated = [self demodulateSpecific:filtered];
+    
+    // Remove any residual DC in the signal
+    removeDC(demodulated, &_average, .001);
+    
+    // Audio Frequency filter
+    CSDRRealArray *audioFiltered = [self.afFilter filter:demodulated];
+    
+    // Iterate through the audio and mute sections that are too low for now, just use a manual squelch threshold
+    const float *powerSamples = self.radioPower.realp;
+    float *audioSamples = audioFiltered.realp;
+    double newAverage = 0;
+    
+    for (int i = 0; i < samples; i++) {
+        double powerSample = powerSamples[i];
+        newAverage += powerSample / (double)samples;
+        
+        bool mute = (powerSample > self.squelch)? NO : YES;
+        float audioSample = audioSamples[i];
+        audioSamples[i] = (mute)? 0.0 : audioSample;
+    }
+    
+    // Copy average power into the rfPower property
+    COCOARADIO_DEMODAVERAGE((int)(self.rfPower * 1000));
+    self.rfPower = newAverage * 10.0;
+    
+    // Rational resampling
+    return [self.afResampler resample:audioFiltered];
+}
+
+// do modulation specific demodulation - this must be overridden in subclas, raise exception if called in base class
+- (CSDRRealArray *)demodulateSpecific:(CSDRComplexArray *)input
 {
     [[NSException exceptionWithName:@"CSDRDemodException" reason:@"Demodulating in the base class!" userInfo:nil] raise];
     return nil;

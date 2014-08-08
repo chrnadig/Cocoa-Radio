@@ -43,4 +43,7 @@
 // demodulate sampled data
 - (CSDRRealArray *)demodulateData:(CSDRComplexArray *)complexInput;
 
+// class private method - do not call from outside
+- (CSDRRealArray *)demodulateSpecific:(CSDRComplexArray *)input;
+
 @end

@@ -39,6 +39,7 @@
     return [self initWithRFRate:2048000 AFRate:48000];
 }
 
+#if 0
 - (CSDRRealArray *)demodulateData:(CSDRComplexArray *)complexInput
 {
     NSUInteger samples = complexInput.length;
@@ -91,6 +92,15 @@
 
     // Rational resampling
     return [self.afResampler resample:audioFiltered];
+}
+#endif
+
+// do modulation specific demodulation
+- (CSDRRealArray *)demodulateSpecific:(CSDRComplexArray *)input
+{
+    // quadrature demodulation
+    float dGain = self.dmGain + (self.rfSampleRate / (2 * M_PI * self.ifFilter.bandwidth));
+    return quadratureDemod(input, dGain, 0.0);
 }
 
 // accessors for read-only properties

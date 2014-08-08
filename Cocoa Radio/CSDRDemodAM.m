@@ -8,6 +8,8 @@
 
 #import "CSDRDemodAM.h"
 #import "CSDRComplexArray.h"
+#import "CSDRRealArray.h"
+#warning remove non needed imports!
 #import "CSDRComplexLowPassFilter.h"
 #import "CSDRRealLowPassFilter.h"
 #import "dspRoutines.h"
@@ -30,14 +32,15 @@
     return self;
 }
 
+#warning remove!
 - (id)init
 {
     return [self initWithRFRate:2048000 AFRate:48000];
 }
 
+#if 0
 - (CSDRRealArray *)demodulateData:(CSDRComplexArray *)complexInput
 {
-#if 0
     // Make sure that the temporary arrays are big enough
     NSUInteger samples = complexInput.length;
     if ([self.radioPower length] < (samples * sizeof(float))) {
@@ -88,9 +91,16 @@
     
     // Rational resampling
     return [self.afResampler resample:audioFiltered];
-#else
-    return nil;
+}
 #endif
+
+// do modulation specific demodulation
+- (CSDRRealArray *)demodulateSpecific:(CSDRComplexArray *)input
+{
+    // AM demodulation - make a copy of RF power array
+    CSDRRealArray *demodulated = [CSDRRealArray arrayWithLength:self.radioPower.length];
+    [demodulated copyFromArray:self.radioPower length:demodulated.length fromIndex:0 toIndex:0];
+    return demodulated;
 }
 
 // accessors for read-only properties
