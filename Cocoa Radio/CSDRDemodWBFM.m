@@ -41,10 +41,15 @@
 
 - (CSDRRealArray *)demodulateData:(CSDRComplexArray *)complexInput
 {
-    // Make sure that the temporary arrays are big enough
     NSUInteger samples = complexInput.length;
+
+    // Make sure that the temporary arrays are big enough
     if (self.radioPower.length < samples) {
-        [self.radioPower setLengthGrowingAtTail:samples];
+        // allocate new array with larger size and copy contents from old buffer
+        CSDRRealArray *oldRadioPower = self.radioPower;
+        self.radioPower = [CSDRRealArray arrayWithLength:samples];
+        // copy old contents, new space (zeroed) at end
+        [self.radioPower copyFromArray:oldRadioPower length:oldRadioPower.length fromIndex:0 toIndex:0];
     }
     
     // Down convert

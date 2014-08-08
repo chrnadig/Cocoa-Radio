@@ -35,19 +35,19 @@
 
 - (void)dealloc
 {
-#warning change ring buffer too!
     free(_realp);
 }
 
-// copy floats to another array - not thread safe
-- (void)copyToArray:(CSDRRealArray *)other numElements:(NSUInteger)numElements fromIndex:(NSUInteger)fromIndex toIndex:(NSUInteger)toIndex
+// copy floats to another array
+- (void)copyFromArray:(CSDRRealArray *)other length:(NSUInteger)length fromIndex:(NSUInteger)fromIndex toIndex:(NSUInteger)toIndex
 {
     // some sanity checks first
-    if (fromIndex + numElements <= self.length && toIndex + numElements <= other.length) {
-        memcpy(other.realp + toIndex, self.realp + fromIndex, numElements * sizeof(float));
+    if (fromIndex + length <= other.length && toIndex + length <= self.length) {
+        memcpy(self.realp + toIndex, other.realp + fromIndex, length * sizeof(float));
     } else {
+#warning replace with exception
         NSLog(@"-copyToArray called with invalid arguments: numElements = %lu, fromIndex = %lu, toIndex = %lu, fromLength = %lu, toLength = %lu",
-              numElements, fromIndex, toIndex, self.length, other.length);
+              length, fromIndex, toIndex, self.length, other.length);
     }
 }
 
@@ -57,51 +57,6 @@
     memset(self.realp, 0, self.length * sizeof(float));
 }
 
-// re-adjust size, insert 0 at start
-// CAUTION: this is not thread safe (and cannot be done thread safe)
-- (void)setLengthGrowingAtHead:(NSUInteger)newLength
-{
-    if (newLength > self.length) {
-        // realloc does not make sense since we might need to copy values again
-        float *newValues = malloc(newLength * sizeof(float));
-        if (newValues != NULL) {
-            // clear new space at head
-            memset(newValues, 0, (newLength - self.length) * sizeof(float));
-            // copy old values
-            memcpy(newValues + newLength - self.length, self.realp, self.length * sizeof(float));
-            // free old space and assign new space
-            free(self.realp);
-            self.realp = newValues;
-            self.length = newLength;
-        }
-    } else {
-        // just shrink with realloc
-        float *newValues = realloc(self.realp, newLength * sizeof(float));
-        if (newValues != NULL) {
-            self.realp = newValues;
-            self.length = newLength;
-        }
-    }
-}
-
-// re-adjust size, insert 0 at end
-// CAUTION: this is not thread safe (and cannot be done thread safe)
-- (void)setLengthGrowingAtTail:(NSUInteger)newLength
-{
-    // try to realloc to new size
-    float *newValues = realloc(self.realp, newLength * sizeof(float));
-    // do nothing in case of failure - old pointer is still valid!
-    if (newValues != NULL) {
-        // clear new space at tail
-        if (newLength > self.length) {
-            memset(newValues + self.length, 0, newLength - self.length);
-        }
-        self.realp = newValues;
-        self.length = newLength;
-    }
-}
-
-// CAUTION: this is not thread safe
 - (NSString *)description
 {
     NSMutableString *string = [NSMutableString stringWithFormat:@"%@(%lu) = {", NSStringFromClass([self class]), self.length];

@@ -22,10 +22,10 @@
 // initializer
 - (instancetype)initWithLength:(NSUInteger)length;
 
-// copy complex floats to another array - not thread safe
-- (void)copyToArray:(CSDRComplexArray *)other numElements:(NSUInteger)numElements fromIndex:(NSUInteger)fromIndex toIndex:(NSUInteger)toIndex;
+// copy complex floats to another array
+- (void)copyFromArray:(CSDRComplexArray *)other length:(NSUInteger)length fromIndex:(NSUInteger)fromIndex toIndex:(NSUInteger)toIndex;
 
-// clear array (set all values to 0.0)
+// clear array (set all values to 0.0+0.0i)
 - (void)clear;
 
 

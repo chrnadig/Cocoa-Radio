@@ -8,6 +8,7 @@ General:
 - merge multiple @class lines into one
 - unify parameter names to see a flow of data through methods (look for data, complexRaw, complexInput etc.)
 - move all private properties to .m file
+- replace NSLogs that indicate a programming error with NSExceptions
 
 CSDRRingBuffer:
 - replace ring buffer design eventually with an array of incoming CSDR*Arrays, to save one copy operation

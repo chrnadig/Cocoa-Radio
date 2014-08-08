@@ -41,16 +41,17 @@
     free(_complex.realp);
 }
 
-// copy complex floats to another array - not thread safe
-- (void)copyToArray:(CSDRComplexArray *)other numElements:(NSUInteger)numElements fromIndex:(NSUInteger)fromIndex toIndex:(NSUInteger)toIndex
+// copy complex floats to another array
+- (void)copyFromArray:(CSDRComplexArray *)other length:(NSUInteger)length fromIndex:(NSUInteger)fromIndex toIndex:(NSUInteger)toIndex
 {
     // some sanity checks first
-    if (fromIndex + numElements <= self.length && toIndex + numElements <= other.length) {
-        memcpy(other.realp + toIndex, self.realp + fromIndex, numElements * sizeof(float));
-        memcpy(other.imagp + toIndex, self.imagp + fromIndex, numElements * sizeof(float));
+    if (fromIndex + length <= other.length && toIndex + length <= self.length) {
+        memcpy(self.realp + toIndex, other.realp + fromIndex, length * sizeof(float));
+        memcpy(self.imagp + toIndex, other.imagp + fromIndex, length * sizeof(float));
     } else {
+#warning replace with exception
         NSLog(@"-copyToArray called with invalid arguments: numElements = %lu, fromIndex = %lu, toIndex = %lu, fromLength = %lu, toLength = %lu",
-              numElements, fromIndex, toIndex, self.length, other.length);
+              length, fromIndex, toIndex, self.length, other.length);
     }
 }
 

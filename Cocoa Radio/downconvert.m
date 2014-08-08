@@ -15,10 +15,8 @@
 
 //#define ACCELERATE_POWER
 
-// This function first "mixes" the input frequency with a local oscillator
-// The effect of this is that the desired frequency is moved to 0 Hz.
-// Then, the band is low-pass filtered to eliminate unwanted signals
-// No decimation is performed at this point.
+// This function first "mixes" the input frequency with a local oscillator .The effect of this is that the desired frequency is moved to 0 Hz.
+// Then, the band is low-pass filtered to eliminate unwanted signals. No decimation is performed at this point.
 CSDRComplexArray *freqXlate(CSDRComplexArray *inputData, float localOscillator, int sampleRate)
 {
     static float lastPhase = 0.0;
@@ -64,7 +62,7 @@ CSDRRealArray *quadratureDemod(CSDRComplexArray *input, float gain, float offset
     CSDRComplexArray *temp = [CSDRComplexArray arrayWithLength:input.length];
     temp.realp[0] = lastReal;
     temp.imagp[0] = lastImag;
-    [input copyToArray:temp numElements:input.length - 1 fromIndex:0 toIndex:1];
+    [temp copyFromArray:input length:input.length - 1 fromIndex:0 toIndex:1];
     
     // Vectorized complex multiplication
 #warning can this be done in place?
