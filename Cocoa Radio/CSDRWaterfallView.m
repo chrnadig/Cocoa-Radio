@@ -237,7 +237,7 @@ rainbow(float pixel[4], float value)
     [shader setIntValue:[[self appDelegate] average]       forUniform:@"average"];
     [shader setFloatValue:[[self appDelegate] bottomValue] forUniform:@"bottomValue"];
     [shader setFloatValue:[[self appDelegate] range]       forUniform:@"range"];
-    
+
     glBegin( GL_QUADS ); {
 		glColor3f( 0., 1., 0. );
 
@@ -261,13 +261,40 @@ rainbow(float pixel[4], float value)
     
     [shader unBind];
     glBindTexture( GL_TEXTURE_2D, 0 );
-	
+    
+#if 0
+    glBegin(GL_QUADS);
+    {
+        glColor4f(1.0, 0.5, 0.5, 0.05);
+        glVertex2f([self sliderValue] - 0.1, -1); // vertex 1
+        glVertex2f([self sliderValue] + 0.1, -1); // vertex 2
+        glVertex2f([self sliderValue] + 0.1,  1); // vertex 3
+        glVertex2f([self sliderValue] - 0.1,  1); // vertex 4
+    }
+    glEnd();
+
+#if 0
+    glBegin( GL_LINES ); {
+		glColor3f( 1.0, 0.0, 0.0 );
+		glVertex2f( [self sliderValue] - 0.1, -1);
+		glVertex2f( [self sliderValue] - 0.1,  1);
+	} glEnd();
+    
 	glBegin( GL_LINES ); {
-		glColor3f( 1., 0., 0. );
+		glColor3f( 1.0, 0.0, 0.0 );
+		glVertex2f( [self sliderValue] + 0.1, -1);
+		glVertex2f( [self sliderValue] + 0.1,  1);
+	} glEnd();
+#endif
+    
+#endif
+    
+	glBegin( GL_LINES ); {
+		glColor3f( 1.0, 0.0, 0.0 );
 		glVertex2f( [self sliderValue], -1);
 		glVertex2f( [self sliderValue],  1);
 	} glEnd();
-    
+
 }
 
 - (void)update
