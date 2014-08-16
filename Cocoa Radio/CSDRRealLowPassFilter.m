@@ -19,6 +19,7 @@
 
 - (CSDRRealArray *)filter:(CSDRRealArray *)input
 {
+#warning this filter does not really work!
     // self.taps may change while this method executes, take a local copy
     CSDRRealArray *taps = self.taps;
     if (taps != nil) {

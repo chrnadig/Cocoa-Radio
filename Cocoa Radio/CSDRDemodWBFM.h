@@ -10,8 +10,5 @@
 
 @interface CSDRDemodWBFM : CSDRDemod
 
-@property (readwrite) double average;
-@property (readwrite) struct dsp_context powerContext;
-
 @end
 

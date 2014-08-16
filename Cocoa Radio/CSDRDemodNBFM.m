@@ -22,75 +22,12 @@
         self.ifSkirtWidth =  5000.0;
         self.ifFilter.gain = 5.0;
         self.afFilter.bandwidth  = 18000.0;
+#warning have 500.0 here instead - probably only if AF filtering is done after resampling, otherwise CPU usage is too high!
         self.afFilter.skirtWidth =  5000.0;
         self.dmGain = 1.0;
-        _average = NAN;
     }
     return self;
 }
-
-- (id)init
-{
-    return [self initWithRFRate:2048000 AFRate:48000];
-}
-
-#if 0
-- (CSDRRealArray *)demodulateData:(CSDRComplexArray *)complexInput
-{
-    // Make sure that the temporary arrays are big enough
-    NSUInteger samples = complexInput.length;
-    if ([self.radioPower length] < (samples * sizeof(float))) {
-        [self.radioPower setLength:samples * sizeof(float)];
-    }
-    
-    // Down convert
-    NSDictionary *baseBand;
-    baseBand = freqXlate(complexInput, self.centerFreq, self.rfSampleRate);
-    
-    // Low-pass filter
-    NSDictionary *filtered;
-    filtered = [self.ifFilter filterDict:baseBand];
-    
-    // Get an array of signal power levels for squelch
-    getPower(filtered, self.radioPower, &_powerContext, .0001);
-    
-    // Quadrature demodulation
-    float dGain = self.dmGain + self.rfSampleRate / (2 * M_PI * self.ifFilter.bandwidth);
-    NSMutableData *demodulated;
-    demodulated = (NSMutableData *)quadratureDemod(filtered, dGain, 0.);
-    
-    // Remove any residual DC in the signal
-    removeDC(demodulated, &_average, .003);
-    
-    // Audio Frequency filter
-    NSMutableData *audioFiltered;
-    audioFiltered = (NSMutableData *)[self.afFilter filterData:demodulated];
-    
-    // Iterate through the audio and mute sections that are too low
-    // for now, just use a manual squelch threshold
-    
-    const float *powerSamples = [self.radioPower bytes];
-    float *audioSamples = [audioFiltered mutableBytes];
-    double newAverage = 0;
-
-    for (int i = 0; i < samples; i++) {
-        double powerSample = powerSamples[i];
-        newAverage += powerSample / (double)samples;
-        
-        bool mute = (powerSample > self.squelch)? NO : YES;
-        float audioSample = audioSamples[i];
-        audioSamples[i] = (mute)? 0. : audioSample;
-    }
-
-    // Copy average power into the rfPower property
-    COCOARADIO_DEMODAVERAGE((int)(self.rfPower * 1000));
-    self.rfPower = newAverage * 10.0;
-    
-    // Rational resampling
-    return [self.afResampler resample:audioFiltered];
-    return nil;
-}
-#endif
 
 // do modulation specific demodulation
 - (CSDRRealArray *)demodulateSpecific:(CSDRComplexArray *)input

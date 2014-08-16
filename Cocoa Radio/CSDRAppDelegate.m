@@ -398,9 +398,7 @@
     _demodulationScheme = demodulationScheme;
     
     // Create a new demodulator
-    CSDRDemod *newDemodulator = [CSDRDemod demodulatorWithScheme:demodulationScheme];
-    newDemodulator.rfSampleRate = rfSampleRate;
-    newDemodulator.afSampleRate = afSampleRate;
+    CSDRDemod *newDemodulator = [CSDRDemod demodulatorWithScheme:demodulationScheme rfRate:rfSampleRate afRate:afSampleRate];
     newDemodulator.squelch = [self.squelch floatValue];
 
     // Setup the endpoints on the slider

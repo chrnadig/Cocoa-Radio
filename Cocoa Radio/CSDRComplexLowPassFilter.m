@@ -47,6 +47,7 @@
 
         // Refresh the contents of the buffer
         // We need to keep the same number of samples as the number of taps
+#warning should be able to copy from input? only if vDSP_conv was done out of place!
         [self.buffer copyFromArray:temp length:self.buffer.length fromIndex:input.length toIndex:0];
         
         // Return the results

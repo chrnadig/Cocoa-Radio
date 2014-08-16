@@ -25,14 +25,16 @@
 @implementation CSDRDemod
 
 // factory class method
-+ (CSDRDemod *)demodulatorWithScheme:(NSString *)scheme
++ (CSDRDemod *)demodulatorWithScheme:(NSString *)scheme rfRate:(float)rfRate afRate:(float)afRate
 {
+    NSLog(@"have rates %f, %f", rfRate, afRate);
+#warning replace with public constants, introduce method to query available modulations
     if ([scheme caseInsensitiveCompare:@"WBFM"] == NSOrderedSame) {
-        return [CSDRDemodWBFM new];
+        return [[CSDRDemodWBFM alloc] initWithRFRate:rfRate AFRate:afRate];
     } else if ([scheme caseInsensitiveCompare:@"NBFM"] == NSOrderedSame) {
-        return [CSDRDemodNBFM new];
+        return [[CSDRDemodNBFM alloc] initWithRFRate:rfRate AFRate:afRate];
     } else if ([scheme caseInsensitiveCompare:@"AM"] == NSOrderedSame) {
-        return [CSDRDemodAM new];
+        return [[CSDRDemodAM alloc] initWithRFRate:rfRate AFRate:afRate];
     }
     return nil;
 }
@@ -54,21 +56,17 @@
         _rfCorrectedRate = rfRate;
         _ifFilter.sampleRate = rfRate;
         _afSampleRate = afRate;
-        _afFilter.sampleRate = afRate;
-        // Assume nyquist for the AFFilter
-        _afFilter.bandwidth  = afRate / 2.0;
-        _afFilter.skirtWidth = 10000.0;
+        // AF filter runs with RF sample rate (filter is done before resampling)!
+        _afFilter.sampleRate = rfRate;
         _squelch = 0.0;
         _radioPower = [CSDRRealArray new];
+        _average = NAN;
+        // setup resampler
+#warning this needs to go into resampler and should be automatic!
+        [self calculateResampleRatio];
     }
     
     return self;
-}
-
-// Just do the above initialization with some defaults
-- (id)init
-{
-    return [self initWithRFRate:2048000 AFRate:48000];
 }
 
 // demodulate sampled data
@@ -101,6 +99,7 @@
     removeDC(demodulated, &_average, .001);
     
     // Audio Frequency filter
+#warning should we rather do this after resampling in order to save processing power due to the lower sample rate? if so, correct sample rate of af filter in -init
     CSDRRealArray *audioFiltered = [self.afFilter filter:demodulated];
     
     // Iterate through the audio and mute sections that are too low for now, just use a manual squelch threshold
@@ -154,16 +153,21 @@ int gcd(int a, int b) {
 }
 
 #pragma mark Getters and Setters
+#warning necessary?
 - (void)setRfSampleRate:(float)rfSampleRate
 {
+    NSLog(@"rfrate = %f", rfSampleRate);
     // Assume corrected rate equals requested until known better
     _rfSampleRate = rfSampleRate;
     self.rfCorrectedRate = self.ifFilter.sampleRate = self.afFilter.sampleRate = rfSampleRate;
     [self calculateResampleRatio];
 }
 
+#warning necessary?
 - (void)setAfSampleRate:(float)afSampleRate
 {
+    NSLog(@"afSampleRate = %f", afSampleRate);
+
     _afSampleRate = afSampleRate;
     [self calculateResampleRatio];
 }
@@ -245,7 +249,7 @@ int gcd(int a, int b) {
 
 - (float)afMinBandwidth
 {
-    return 1000.0;
+    return 100.0;
 }
 
 @end

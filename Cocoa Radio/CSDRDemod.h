@@ -12,6 +12,7 @@
 
 @interface CSDRDemod : NSObject
 
+#warning move private properties to .m file
 @property (readwrite) CSDRComplexLowPassFilter *ifFilter;
 @property (readwrite) CSDRRealLowPassFilter *afFilter;
 @property (readwrite) CSDRResampler *afResampler;
@@ -35,7 +36,7 @@
 @property (readwrite) float squelch;
 
 // factory class method
-+ (CSDRDemod *)demodulatorWithScheme:(NSString *)scheme;
++ (CSDRDemod *)demodulatorWithScheme:(NSString *)scheme rfRate:(float)rfRate afRate:(float)afRate;
 
 // designated initializer
 - (id)initWithRFRate:(float)rfRate AFRate:(float)afRate;
@@ -43,7 +44,8 @@
 // demodulate sampled data
 - (CSDRRealArray *)demodulateData:(CSDRComplexArray *)complexInput;
 
-// class private method - do not call from outside
+// do modulation specific demodulation - class private method - do not call from outside
+#warning find better name for this?
 - (CSDRRealArray *)demodulateSpecific:(CSDRComplexArray *)input;
 
 @end

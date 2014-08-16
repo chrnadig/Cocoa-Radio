@@ -34,10 +34,11 @@
         // Assume the Hamming window for now, which has a width factor of 3.3
         // Do all calculation at double precision
         CSDRRealArray *newTaps;
+#warning replace tapsData with newTaps.realp -> this is not very time critical since number of taps is small
         float *tapsData;
         double *window;
         double widthFactor = 3.3;
-        double deltaF = (self.skirtWidth / self.sampleRate);
+        double deltaF = self.skirtWidth / self.sampleRate;
         int numTaps = widthFactor / deltaF + 0.5;
         
         // enfoce odd number of taps
