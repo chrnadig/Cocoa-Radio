@@ -35,7 +35,6 @@ static NSString *audioSourceDeviceUIDKey            = @"audioSourceDeviceUID";
 
 @implementation CSDRAudioDevice
 
-
 + (NSArray *)initDeviceDict
 {
     // Variables used for each of the functions
@@ -103,6 +102,7 @@ static NSString *audioSourceDeviceUIDKey            = @"audioSourceDeviceUID";
                       forKey:audioSourceDeviceUIDKey];
 
         //TODO: change these calls to non-deprecated functions
+#warning replace with current function calls
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -113,15 +113,14 @@ static NSString *audioSourceDeviceUIDKey            = @"audioSourceDeviceUID";
                                kAudioDevicePropertyNominalSampleRate,
                                &propertySize, &currentSampleRate);
         
-        
-        [deviceDict setValue:[NSNumber numberWithFloat:currentSampleRate]
-                      forKey:audioSourceNominalSampleRateKey];
+        [deviceDict setValue:[NSNumber numberWithFloat:currentSampleRate] forKey:audioSourceNominalSampleRateKey];
         
         // Get an array of sample rates
         AudioValueRange *sampleRates;
         AudioDeviceGetPropertyInfo(deviceIDs[i], 0, NO,
                                    kAudioDevicePropertyAvailableNominalSampleRates,
                                    &propertySize, &writable);
+        
         sampleRates = (AudioValueRange *)malloc(propertySize);
         AudioDeviceGetProperty(deviceIDs[i], 0, NO,
                                kAudioDevicePropertyAvailableNominalSampleRates,
@@ -201,6 +200,7 @@ static NSString *audioSourceDeviceUIDKey            = @"audioSourceDeviceUID";
 
 - (id)init
 {
+    NSLog(@"devices = %@", [[self class] deviceDict]);
     if (self = [super init]) {
         // this code is generic for input and output subclasses refine it further
         // !! this code is from Apple Technical Note TN2091. There are several different types of Audio Units.
@@ -263,6 +263,7 @@ static NSString *audioSourceDeviceUIDKey            = @"audioSourceDeviceUID";
 
 @end
 
+#warning split into two files
 @implementation CSDRAudioOutput
 
 OSStatus OutputProc(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *TimeStamp,

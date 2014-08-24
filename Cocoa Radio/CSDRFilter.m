@@ -6,6 +6,7 @@
 //  Copyright (c) 2012 Oregon State University (COAS). All rights reserved.
 //
 
+#import <Accelerate/Accelerate.h>
 #import "CSDRFilter.h"
 #import "CSDRRealArray.h"
 
@@ -14,10 +15,7 @@
 - (id)init
 {
     if (self = [super init]) {
-        _sampleRate = -1;
-        _skirtWidth = -1;
-        _bandwidth = -1;
-        _gain = 1;
+        _sampleRate = _skirtWidth = _bandwidth = _gain = -1;
     }
     return self;
 }
@@ -25,67 +23,37 @@
 // This function is derived from the source for GNURadio available here:
 //     http://gnuradio.org/redmine/projects/gnuradio/repository/revisions/master/entry/gr-filter/lib/firdes.cc
 // It, like this project, is licensed under the GPL. This implementation is entirely independent and not copied.
-// Only the mathematical constructs are the same.
+// Only the mathematical constructs are the same. See here for more: http://en.wikipedia.org/wiki/Window_function#Hamming_window
 - (void)computeTaps
 {
     // make sure we have everything we need
     if (self.sampleRate > 0.0 && self.skirtWidth > 0.0 && self.bandwidth > 0.0 && self.gain > 0.0 && self.skirtWidth < self.sampleRate / 2.0) {
-        // Determine the number of taps required.
-        // Assume the Hamming window for now, which has a width factor of 3.3
-        // Do all calculation at double precision
+        // Determine the number of taps required. Assume the Hamming window for now, which has a width factor of 3.3
         CSDRRealArray *newTaps;
-#warning replace tapsData with newTaps.realp -> this is not very time critical since number of taps is small
-        float *tapsData;
-        double *window;
-        double widthFactor = 3.3;
-        double deltaF = self.skirtWidth / self.sampleRate;
-        int numTaps = widthFactor / deltaF + 0.5;
+        NSInteger numTaps = 3.3 / (self.skirtWidth / self.sampleRate) + 0.5;    // width factor / (skirt width / sample rate) + 0.5
+        NSInteger M = (numTaps - 1) / 2;                                        // numTaps - 1 is filter order
+        double fwT0 = 2 * M_PI * self.bandwidth / self.sampleRate;              // not sure what this really is, incorporated from GNURadio
+        double fMax;
+        float gain;
         
         // enfoce odd number of taps
         numTaps = (numTaps / 2) * 2 + 1;
         
         // create an CSDRRealArray object to hold the taps (store only single-precision)
         newTaps = [CSDRRealArray arrayWithLength:numTaps];
-        tapsData = newTaps.realp;
         
-        // allocate temporary space
-        window = malloc(numTaps * sizeof(double));
-        if (window != NULL) {
-            // compute the window coefficients
-            int filterOrder = numTaps - 1;
-            int M = filterOrder / 2;
-            double fMax;
-            double gain;
-            double fwT0 = 2 * M_PI * self.bandwidth / self.sampleRate;  // Not sure what this really is, incorporated from GNURadio
-
-            for (int i = 0; i < numTaps; i++) {
-                window[i] = 0.54 - 0.46 * cos((2 * M_PI * i) / filterOrder);
-            }
-        
-            // Calculate the filter taps treat the center as '0'
-            for (int i = -M; i <= M; i++) {
-                if (i == 0) {
-                    tapsData[M] = fwT0 / M_PI * window[M];
-                } else {
-                    tapsData[i + M] = sin(i * fwT0) / (i * M_PI) * window[i + M];
-                }
-            }
-
-            fMax = tapsData[M];
-            for (int i = 0; i <= M; i++) {
-                fMax += 2 * tapsData[i + M];
-            }
-        
-            // normalization
-            gain = self.gain / fMax;
-            for (int i = 0; i < numTaps; i++) {
-                tapsData[i] *= gain;
-            }
-        
-            // update the taps (no lock needed, synthesized accessors are atomic)
-            self.taps = newTaps;
-            free(window);
+        fMax = newTaps.realp[M] = fwT0 / M_PI;
+        for (NSInteger i = 1; i < M; i++) {
+            // taps are symmetric (sin() is mirrored around 0 (sign is compensated by (i * M_PI)), cos() is symmetric arround M_PI
+            newTaps.realp[M + i] = newTaps.realp[M - i] = sin(i * fwT0) / (i * M_PI) * (0.54 - 0.46 * cos(M_PI * (M + i) / M));
+            fMax += 2 * newTaps.realp[M + i];
         }
+        // normalization
+        gain = self.gain / fMax;
+        vDSP_vsmul(newTaps.realp, 1, &gain, newTaps.realp, 1, newTaps.length);
+
+        // update the taps (no lock needed, synthesized accessors are atomic)
+        self.taps = newTaps;
     }
 }
 
