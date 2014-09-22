@@ -21,7 +21,7 @@
 + (instancetype)bufferWithCapacity:(NSUInteger)capacity;
 
 // initializer
-- (id)initWithCapacity:(NSInteger)capacity;
+- (id)initWithCapacity:(NSUInteger)capacity;
 
 // store data in the ring buffer
 - (void)storeData:(CSDRRealArray *)data;

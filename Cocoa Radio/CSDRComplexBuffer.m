@@ -94,7 +94,7 @@
 - (void)fillData:(CSDRComplexArray *)data
 {
     float *rdst = data.realp;
-    float *idst = data.realp;
+    float *idst = data.imagp;
     NSUInteger n = data.length;
     
     [self.lock lock];

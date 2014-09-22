@@ -35,7 +35,7 @@ static NSString *audioSourceDeviceUIDKey            = @"audioSourceDeviceUID";
 
 @implementation CSDRAudioDevice
 
-+ (NSArray *)initDeviceDict
++ (NSArray *)getDeviceDict
 {
     // Variables used for each of the functions
     UInt32 propertySize = 0;
@@ -193,14 +193,13 @@ static NSString *audioSourceDeviceUIDKey            = @"audioSourceDeviceUID";
     static NSArray *devices;
     static dispatch_once_t dictOnceToken;
     dispatch_once(&dictOnceToken, ^{
-        devices = [CSDRAudioDevice initDeviceDict];
+        devices = [self getDeviceDict];
     });
     return devices;
 }
 
 - (id)init
 {
-    NSLog(@"devices = %@", [[self class] deviceDict]);
     if (self = [super init]) {
         // this code is generic for input and output subclasses refine it further
         // !! this code is from Apple Technical Note TN2091. There are several different types of Audio Units.

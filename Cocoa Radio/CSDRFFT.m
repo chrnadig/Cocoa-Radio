@@ -21,6 +21,7 @@
 @property (readwrite) NSCondition *lock;
 @property (readwrite) NSThread *fftThread;
 @property (readwrite) CSDRComplexBuffer *ringBuffer;
+@property (readwrite) CSDRRealArray *magBuffer;
 @property (readwrite) NSInteger counter;
 @property (readwrite) NSInteger log2n;
 @end
@@ -40,9 +41,9 @@
             _fftSetup = vDSP_create_fftsetup(_log2n, FFT_RADIX2);
             if (_fftSetup != NULL) {
                 // allocate buffers
-                _buffer = [CSDRComplexArray arrayWithLength:initSize];
-                _magBuffer = [CSDRRealArray arrayWithLength:initSize];
-                _ringBuffer = [CSDRComplexBuffer bufferWithCapacity:initSize * 1024];
+                _buffer = [CSDRComplexArray arrayWithLength:_size];
+                _magBuffer = [CSDRRealArray arrayWithLength:_size];
+                _ringBuffer = [CSDRComplexBuffer bufferWithCapacity:_size * 1024];
                 // processing synchronization
                 _lock = [NSCondition new];
                 [_lock setName:@"com.us.alternet.cocoaradio.condition"];
@@ -71,18 +72,25 @@
         static const float B = 1.0;
         static const float C = 10.0;
         float fcounter = self.counter;
+        
+        // allocate a new buffer to avoid race conditions with FFT display (accessors are atomic)
+#warning is there maybe a better solution using locks?
+        CSDRRealArray *newMagBuffer = [CSDRRealArray arrayWithLength:self.size];
+        
+        // calculate mag buffer values
         vDSP_vsdiv(self.buffer.realp, 1, &fcounter, self.buffer.realp, 1, self.size);
         vDSP_vsdiv(self.buffer.imagp, 1, &fcounter, self.buffer.imagp, 1, self.size);
-        vDSP_zvabs(self.buffer.complexp, 1, self.magBuffer.realp, 1, self.size);
-        vDSP_vdbcon(self.magBuffer.realp, 1, &B, self.magBuffer.realp, 1, self.size, 0);
-        vDSP_vsdiv(self.magBuffer.realp, 1, &C, self.magBuffer.realp, 1, self.size);
+        vDSP_zvabs(self.buffer.complexp, 1, newMagBuffer.realp, 1, self.size);
+        vDSP_vdbcon(newMagBuffer.realp, 1, &B, newMagBuffer.realp, 1, self.size, 0);
+        vDSP_vsdiv(newMagBuffer.realp, 1, &C, newMagBuffer.realp, 1, self.size);
 
         if (COCOARADIO_FFTCOUNTER_ENABLED()) {
             COCOARADIO_FFTCOUNTER((int)self.counter);
         }
 
-        self.counter = 0;
         [self.buffer clear];
+        self.magBuffer = newMagBuffer;
+        self.counter = 0;
     }
 }
 
