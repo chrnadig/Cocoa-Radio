@@ -11,24 +11,22 @@ uniform float range;
 
 float getValue(vec2 tex)
 {
-    float value = 0.;
+    float value = 0.0;
     float inputY = tex.y;
+    float deltaY = 1.0 / float(height);
     
-    float deltaY = 1. / float(height);
-    
-    int i = 0;
-    for(i = 0; i < average; i++) {
+    for(int i = 0; i < average; i++) {
         // For each sample, look into the past i samples
         tex.y = inputY - (deltaY * float(i));
         
         // Wrap-around the height of the texture
-        tex.y = mod(tex.y, 1.);
+        tex.y = mod(tex.y, 1.0);
         
         // Retreive the sample
         float temp = texture2D(texture, tex).a;
         
         // Devide by the number of samples and accumulate
-        value += temp * (1. / float(average));
+        value += temp * (1.0 / float(average));
     }
     
     return value;

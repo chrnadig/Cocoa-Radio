@@ -25,10 +25,12 @@
 - (instancetype)initWithLength:(NSUInteger)length
 {
     if (self = [super init]) {
+        _length = length;
+        // vDSP functions work best if memory is aligned to multiples of 16
+        length = ((length + 3) / 4) * 4;
         _complex.realp = calloc(length * 2, sizeof(float));
         if (_complex.realp != NULL) {
             _complex.imagp = _complex.realp + length;
-            _length = length;
             return self;
         }
     }

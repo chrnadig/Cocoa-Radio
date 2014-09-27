@@ -6,7 +6,7 @@ uniform float range;
 
 void main()
 {
-    vec2 coords = vec2(1024.,1024.);
+    vec2 coords = vec2(1024.0, 1024.0);
     float value = texture2D(texture, coords).a;
     float zeroCorrected = value - bottomValue;
     float scaled = zeroCorrected / range;

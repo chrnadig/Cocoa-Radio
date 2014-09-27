@@ -16,39 +16,16 @@
 @class CSDRAppDelegate;
 
 @interface CSDRWaterfallView : OpenGLController
-{
-    bool initialized;
-    
-    // This value sets the location of the line for current tuning
-	float sliderValue;
-    float tuningValue;
-	float sampleRate;
-    
-    // These ivars maintain OpenGL state
-	bool textureCurrent;
-	unsigned int textureID;
-	unsigned char *textureBytes;
-    unsigned int currentLine;
-
-    ShaderProgram *shader;
-    
-    // This array contains the last spectrum slices
-    // The slices are NSData arrays of floats from 0. to 1.
-    NSMutableArray *slices;
-}
 
 @property (readwrite) IBOutlet CSDRAppDelegate *appDelegate;
 @property (readwrite) float sliderValue;
 @property (readwrite) float sampleRate;
-
 @property (readwrite) float tuningValue;
-
-@property (readonly) unsigned int textureID;
-@property (readonly) unsigned int currentLine;
+@property (readonly) GLint currentLine;
+@property (readonly) GLuint textureID;
 
 - (void)initialize;
 - (IBAction) sliderUpdate:(id)sender;
-
 - (void)update;
 
 @end

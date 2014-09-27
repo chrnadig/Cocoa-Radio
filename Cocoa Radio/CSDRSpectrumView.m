@@ -11,9 +11,11 @@
 #import "OpenGLController.h"
 #import "CSDRWaterfallView.h"
 
+// texture size
 #define WIDTH  2048
 #define HEIGHT 4096
 
+// grid size
 #define H_GRID 10
 #define V_GRID 10
 
@@ -31,10 +33,10 @@
         NSOpenGLPFAAccumSize, 32,
         NSOpenGLPFADepthSize, 16,
         NSOpenGLPFAMultisample,
-        NSOpenGLPFASampleBuffers, (NSOpenGLPixelFormatAttribute)1,
-        NSOpenGLPFASamples, (NSOpenGLPixelFormatAttribute)4,
-        (NSOpenGLPixelFormatAttribute)nil };
-    
+        NSOpenGLPFASampleBuffers, 1,
+        NSOpenGLPFASamples, 4,
+        (NSOpenGLPixelFormatAttribute)nil
+    };
     return [[NSOpenGLPixelFormat alloc] initWithAttributes:attributes];
 }
 
