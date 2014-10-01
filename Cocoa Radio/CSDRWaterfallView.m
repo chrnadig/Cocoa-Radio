@@ -15,9 +15,6 @@
 #define WIDTH  2048
 #define HEIGHT 4096
 
-// pixel indices
-enum { PX_R, PX_G, PX_B, PX_V };
-
 // private declarations
 @interface CSDRWaterfallView ()
 @property (readwrite) BOOL initialized;
@@ -115,6 +112,7 @@ enum { PX_R, PX_G, PX_B, PX_V };
 
     CSDRRealArray *newSlice = self.appDelegate.fftData;
     if (newSlice != nil) {
+
         self.currentLine = self.currentLine == HEIGHT ? 0 : self.currentLine + 1;
         
         const float *rawBuffer = newSlice.realp;

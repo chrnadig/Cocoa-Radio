@@ -27,7 +27,6 @@
 // factory class method
 + (CSDRDemod *)demodulatorWithScheme:(NSString *)scheme rfRate:(float)rfRate afRate:(float)afRate
 {
-    NSLog(@"have rates %f, %f", rfRate, afRate);
 #warning replace with public constants, introduce method to query available modulations
     if ([scheme caseInsensitiveCompare:@"WBFM"] == NSOrderedSame) {
         return [[CSDRDemodWBFM alloc] initWithRFRate:rfRate AFRate:afRate];

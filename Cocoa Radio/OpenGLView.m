@@ -10,44 +10,6 @@
 
 @implementation OpenGLView
 
-#pragma mark -
-#pragma mark WM Init functions
-
-// OpenGLView Initialization
--(id) initWithFrame: (NSRect) frameRect
-{
-    NSOpenGLPixelFormat *pixelFormat = [OpenGLView defaultPixelFormat];
-	
-    self = [super initWithFrame: frameRect pixelFormat: pixelFormat];
-	initialized = NO;
-	
-    return self;
-}
-
-- (id)initWithFrame:(NSRect)frame pixelFormat:(NSOpenGLPixelFormat *)pixFmt
-{
-	self = [super initWithFrame:frame pixelFormat:pixFmt];
-	if( self == nil ) {
-		NSLog(@"Unable to initialize OpenGL view.");
-		return self;
-	}
-	initialized = NO;
-	
-	return self;
-}
-
-- (id)initWithCoder:(NSCoder *)c
-{
-	self = [super initWithCoder:c];
-	if( self == nil ) {
-		NSLog(@"Unable to initialize OpenGL view.");
-		return self;
-	}
-	initialized = NO;
-	
-	return self;
-}
-
 - (NSOpenGLContext *)glContext
 {
     return glContext;
@@ -61,8 +23,6 @@
     [glContext setView:self];
 }
 
-#pragma mark -
-#pragma mark Application Specific Initialization
 - (void)prepare
 {
 	// Get the current OpenGL context and make it active
@@ -82,8 +42,6 @@
 	return;
 }
 
-#pragma mark -
-#pragma mark Application Specific Callbacks
 - (void)awakeFromNib
 {
 	[self prepare];

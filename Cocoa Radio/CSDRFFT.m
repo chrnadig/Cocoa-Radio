@@ -26,8 +26,6 @@
 @property (readwrite) NSInteger log2n;
 @end
 
-
-#warning there is a problem in here - the spectrum mostly looks symmetrical (tune to 100.0 MHz and see)
 @implementation CSDRFFT
 
 // initializer - size must be a power of 2
@@ -120,7 +118,7 @@
                 
                 // Perform the FFT
                 vDSP_fft_zop(self.fftSetup, input.complexp, 1, output.complexp, 1, self.log2n, FFT_FORWARD);
-                
+
                 // Convert the FFT format and accumulate
                 vDSP_vadd(self.buffer.realp, 1, output.realp + halfSize, 1, self.buffer.realp, 1, halfSize);
                 vDSP_vadd(self.buffer.imagp, 1, output.imagp + halfSize, 1, self.buffer.imagp, 1, halfSize);
