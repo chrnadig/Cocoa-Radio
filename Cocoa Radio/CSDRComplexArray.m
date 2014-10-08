@@ -26,8 +26,8 @@
 {
     if (self = [super init]) {
         _length = length;
-        // vDSP functions work best if memory is aligned to multiples of 16 (so make total size a multiple of 32 bytes)
-        length = ((length + 7) / 8) * 8;
+        // vDSP functions work best if memory is aligned to multiples of 16 bytes
+        length = ((length + 3) / 4) * 4;
         _complex.realp = calloc(length * 2, sizeof(float));
         if (_complex.realp != NULL) {
             _complex.imagp = _complex.realp + length;
