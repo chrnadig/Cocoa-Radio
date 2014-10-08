@@ -46,7 +46,7 @@
         newTaps = [CSDRRealArray arrayWithLength:numTaps];
         
         fMax = newTaps.realp[M] = fwT0 / M_PI;
-        for (NSInteger i = 1; i < M; i++) {
+        for (NSInteger i = 1; i <= M; i++) {
             // taps are symmetric (sin() is mirrored around 0 (sign is compensated by (i * M_PI)), cos() is symmetric arround M_PI
             newTaps.realp[M + i] = newTaps.realp[M - i] = sin(i * fwT0) / (i * M_PI) * (0.54 - 0.46 * cos(M_PI * (M + i) / M));
             fMax += 2 * newTaps.realp[M + i];
