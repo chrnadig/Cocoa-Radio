@@ -26,18 +26,21 @@
 // Only the mathematical constructs are the same. See here for more: http://en.wikipedia.org/wiki/Window_function#Hamming_window
 - (void)computeTaps
 {
+#warning use vDSP functions like vDSP_hamm_window here
     // make sure we have everything we need
     if (self.sampleRate > 0.0 && self.skirtWidth > 0.0 && self.bandwidth > 0.0 && self.gain > 0.0 && self.skirtWidth < self.sampleRate / 2.0) {
         // Determine the number of taps required. Assume the Hamming window for now, which has a width factor of 3.3
         CSDRRealArray *newTaps;
+        NSInteger M;
         NSInteger numTaps = 3.3 / (self.skirtWidth / self.sampleRate) + 0.5;    // width factor / (skirt width / sample rate) + 0.5
-        NSInteger M = (numTaps - 1) / 2;                                        // numTaps - 1 is filter order
+#warning float is probably ok here
         double fwT0 = 2 * M_PI * self.bandwidth / self.sampleRate;              // not sure what this really is, incorporated from GNURadio
         double fMax;
         float gain;
         
         // enfoce odd number of taps
         numTaps = (numTaps / 2) * 2 + 1;
+        M = (numTaps - 1) / 2;
         
         // create an CSDRRealArray object to hold the taps (store only single-precision)
         newTaps = [CSDRRealArray arrayWithLength:numTaps];
