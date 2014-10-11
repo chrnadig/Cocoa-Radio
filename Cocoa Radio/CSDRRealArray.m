@@ -42,13 +42,8 @@
 - (void)copyFromArray:(CSDRRealArray *)other length:(NSUInteger)length fromIndex:(NSUInteger)fromIndex toIndex:(NSUInteger)toIndex
 {
     // some sanity checks first
-    if (fromIndex + length <= other.length && toIndex + length <= self.length) {
-        memcpy(self.realp + toIndex, other.realp + fromIndex, length * sizeof(float));
-    } else {
-#warning replace with exception
-        NSLog(@"-copyToArray called with invalid arguments: numElements = %lu, fromIndex = %lu, toIndex = %lu, fromLength = %lu, toLength = %lu",
-              length, fromIndex, toIndex, self.length, other.length);
-    }
+    NSParameterAssert(fromIndex + length <= other.length && toIndex + length <= self.length);
+    memmove(self.realp + toIndex, other.realp + fromIndex, length * sizeof(float));
 }
 
 // clear array (set all values to 0.0)

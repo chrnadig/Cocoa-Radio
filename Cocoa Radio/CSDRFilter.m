@@ -31,24 +31,23 @@
         // Determine the number of taps required. Assume the Hamming window for now, which has a width factor of 3.3
         CSDRRealArray *newTaps;
         NSInteger numTaps = 3.3 / (self.skirtWidth / self.sampleRate) + 0.5;    // width factor / (skirt width / sample rate) + 0.5
-        NSInteger M = (numTaps - 1) / 2;                                        // numTaps - 1 is filter order
-        double fwT0 = 2 * M_PI * self.bandwidth / self.sampleRate;              // not sure what this really is, incorporated from GNURadio
-        double fMax;
-        float gain;
+        NSInteger M = numTaps / 2;                                              // numTaps - 1 is filter order
+        float fwT0 = 2 * M_PI * self.bandwidth / self.sampleRate;              // not sure what this really is, incorporated from GNURadio
+        float fMax, gain;
         
         // enfoce odd number of taps
-        numTaps = (numTaps / 2) * 2 + 1;
+        numTaps |= 1;
         
         // create an CSDRRealArray object to hold the taps (store only single-precision)
         newTaps = [CSDRRealArray arrayWithLength:numTaps];
         
-        fMax = newTaps.realp[M] = fwT0 / M_PI;
+        newTaps.realp[M] = fwT0 / M_PI;
         for (NSInteger i = 1; i < M; i++) {
             // taps are symmetric (sin() is mirrored around 0 (sign is compensated by (i * M_PI)), cos() is symmetric arround M_PI
             newTaps.realp[M + i] = newTaps.realp[M - i] = sin(i * fwT0) / (i * M_PI) * (0.54 - 0.46 * cos(M_PI * (M + i) / M));
-            fMax += 2 * newTaps.realp[M + i];
         }
         // normalization
+        vDSP_svemg(newTaps.realp, 1, &fMax, newTaps.length);
         gain = self.gain / fMax;
         vDSP_vsmul(newTaps.realp, 1, &gain, newTaps.realp, 1, newTaps.length);
 
