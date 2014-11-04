@@ -49,7 +49,7 @@
 {
     if (!self.initialized) {
         // Read the shader from file
-        uint8_t *blankImage;
+        float *blankImage;
         NSError *nsError = nil;
         NSBundle *bundle = [NSBundle mainBundle];
         NSURL *shaderURL = [bundle URLForResource:@"waterfallShader" withExtension:@"ogl"];
@@ -79,6 +79,9 @@
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_TEXTURE_2D);
         
+        // set texturing to replacement mode
+        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+        
         // Get a texture ID
         glGenTextures(1, &_textureID);
         
@@ -89,21 +92,24 @@
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         
-        if ((blankImage = calloc(4 * WIDTH * HEIGHT, sizeof(float))) != NULL) {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, blankImage);
-            glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-            glBindTexture(GL_TEXTURE_2D, 0);
+        // allocate memory for texture and initialize with blank image - compensate for calculations done in shader
+        if ((blankImage = malloc(WIDTH * HEIGHT * sizeof(float))) != NULL) {
+            float blankValue = self.appDelegate.bottomValue * self.appDelegate.range;
+            for (NSUInteger i = 0; i < WIDTH * HEIGHT; i++) {
+                blankImage[i] = blankValue;
+            }
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, WIDTH, HEIGHT, 0, GL_ALPHA, GL_FLOAT, blankImage);
             free(blankImage);
-
             self.initialized = YES;
         }
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
 }
 
 - (void)draw
 {
     if (!self.initialized) {
-        glClearColor(0., 0., 0., 1.);
+        glClearColor(0.0, 0.0, 0.0, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
         return;
     }
@@ -112,19 +118,9 @@
 
     CSDRRealArray *newSlice = self.appDelegate.fftData;
     if (newSlice != nil) {
-
+        // Replace the oldest line in the texture - fill just alpha, shader does the rest
         self.currentLine = self.currentLine == HEIGHT ? 0 : self.currentLine + 1;
-        
-        const float *rawBuffer = newSlice.realp;
-        float *pixels = malloc(sizeof(float) * WIDTH * 4);
-        if (pixels != NULL) {
-            for (int i = 0; i < WIDTH; i++) {
-                pixels[i*4 + 3] = rawBuffer[i];
-            }
-            // Replace the oldest line in the texture
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, self.currentLine, WIDTH, 1, GL_RGBA, GL_FLOAT, pixels);
-            free(pixels);
-        }
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, self.currentLine, WIDTH, 1, GL_ALPHA, GL_FLOAT, newSlice.realp);
     }
 
     [self.shader bind];
@@ -136,7 +132,7 @@
     [self.shader setIntValue:self.appDelegate.average forUniform:@"average"];
     [self.shader setFloatValue:self.appDelegate.bottomValue forUniform:@"bottomValue"];
     [self.shader setFloatValue:self.appDelegate.range forUniform:@"range"];
-
+    
     glBegin(GL_QUADS); {
         float top = (float)self.currentLine / HEIGHT;
         float bot = top + 1.0;
